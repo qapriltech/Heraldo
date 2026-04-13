@@ -19,34 +19,19 @@ import {
   Save,
   Eye,
   Newspaper,
+  CheckCircle2,
+  Loader2,
+  ShieldCheck,
+  AlertCircle,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
+import { api } from "@/lib/api";
 
-type Format = "long" | "court" | "flash";
-
-const formats: { id: Format; label: string; icon: typeof FileText; desc: string }[] = [
-  {
-    id: "long",
-    label: "Long",
-    icon: FileText,
-    desc: "Communique complet avec details, citations et annexes",
-  },
-  {
-    id: "court",
-    label: "Court",
-    icon: AlignLeft,
-    desc: "Resume concis pour diffusion rapide",
-  },
-  {
-    id: "flash",
-    label: "Flash",
-    icon: Zap,
-    desc: "Information urgente en quelques lignes",
-  },
-];
+type PreviewTab = "presse" | "web" | "social";
 
 const mediaTypes = [
   { id: "presse_ecrite", label: "Presse ecrite", count: 245 },
@@ -56,62 +41,146 @@ const mediaTypes = [
   { id: "agences", label: "Agences de presse", count: 34 },
 ];
 
-const regions = [
-  "Abidjan",
-  "Bouake",
-  "Yamoussoukro",
-  "San Pedro",
-  "Korhogo",
-  "National",
-  "International",
-];
+const regions = ["Abidjan", "Bouake", "Yamoussoukro", "San Pedro", "Korhogo", "National", "International"];
+
+function getToken() {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("heraldo_access_token");
+}
+
+function getUser() {
+  if (typeof window === "undefined") return null;
+  try { return JSON.parse(localStorage.getItem("heraldo_user") || "null"); } catch { return null; }
+}
 
 export default function NewCommuniquePage() {
+  const router = useRouter();
   const [title, setTitle] = useState("");
+  const [chapeau, setChapeau] = useState("");
   const [content, setContent] = useState("");
-  const [activeFormat, setActiveFormat] = useState<Format>("long");
-  const [previewTab, setPreviewTab] = useState<Format>("long");
+  const [contactPresse, setContactPresse] = useState("");
+  const [previewTab, setPreviewTab] = useState<PreviewTab>("presse");
   const [selectedMedia, setSelectedMedia] = useState<string[]>([]);
   const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
   const [dragActive, setDragActive] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [diffusing, setDiffusing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<{ id: string; hash?: string } | null>(null);
 
-  const toggleMedia = (id: string) => {
-    setSelectedMedia((prev) =>
-      prev.includes(id) ? prev.filter((m) => m !== id) : [...prev, id],
-    );
+  const toggleMedia = (id: string) =>
+    setSelectedMedia(prev => prev.includes(id) ? prev.filter(m => m !== id) : [...prev, id]);
+  const toggleRegion = (r: string) =>
+    setSelectedRegions(prev => prev.includes(r) ? prev.filter(x => x !== r) : [...prev, r]);
+
+  const wordCount = content.split(/\s+/).filter(Boolean).length;
+  const isValid = title.length > 0 && content.length > 0 && chapeau.length > 0;
+
+  // Sauvegarder en brouillon
+  const handleSave = async () => {
+    if (!title || !content) { setError("Le titre et le contenu sont obligatoires"); return; }
+    setSaving(true); setError(null);
+    try {
+      const token = getToken();
+      const user = getUser();
+      const res = await api.post<any>("/communiques", {
+        title, chapeau, bodyContent: content, contactPresse,
+        institutionId: user?.institution?.id || user?.id,
+      }, { token: token || undefined });
+      setSuccess({ id: res.id });
+    } catch (err: any) {
+      setError(err?.data?.message || err.message || "Erreur lors de la sauvegarde");
+    } finally { setSaving(false); }
   };
 
-  const toggleRegion = (r: string) => {
-    setSelectedRegions((prev) =>
-      prev.includes(r) ? prev.filter((x) => x !== r) : [...prev, r],
-    );
+  // Sauvegarder + Diffuser
+  const handleDiffuse = async () => {
+    if (!isValid) { setError("Titre, chapeau et contenu sont obligatoires (RG-EMI-02)"); return; }
+    setDiffusing(true); setError(null);
+    try {
+      const token = getToken();
+      const user = getUser();
+      // Créer le communiqué
+      const cp = await api.post<any>("/communiques", {
+        title, chapeau, bodyContent: content, contactPresse,
+        institutionId: user?.institution?.id || user?.id,
+      }, { token: token || undefined });
+
+      // Diffuser
+      const diff = await api.post<any>(`/communiques/${cp.id}/diffuse`, {
+        channels: ["EMAIL", "WHATSAPP"],
+        journalistIds: [],
+      }, { token: token || undefined });
+
+      // Récupérer le hash
+      const hash = await api.get<any>(`/communiques/${cp.id}/hash`, { token: token || undefined });
+
+      setSuccess({ id: cp.id, hash: hash.sha256Hash });
+    } catch (err: any) {
+      setError(err?.data?.message || err.message || "Erreur lors de la diffusion");
+    } finally { setDiffusing(false); }
   };
+
+  // Ecran de succès
+  if (success) {
+    return (
+      <div className="min-h-screen gradient-mesh flex items-center justify-center p-6">
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="max-w-lg w-full text-center">
+          <Card hover={false} padding="lg">
+            <div className="w-20 h-20 rounded-full bg-green/10 flex items-center justify-center mx-auto mb-6">
+              <CheckCircle2 className="w-10 h-10 text-green" />
+            </div>
+            <h2 className="text-2xl font-extrabold text-navy mb-2">
+              {success.hash ? "Communique diffuse !" : "Brouillon sauvegarde !"}
+            </h2>
+            <p className="text-warm-gray mb-6">
+              {success.hash
+                ? "Votre communique a ete certifie SHA-256 et diffuse aux medias cibles."
+                : "Votre communique a ete sauvegarde. Vous pouvez le modifier et le diffuser plus tard."}
+            </p>
+            {success.hash && (
+              <div className="bg-ivory rounded-xl p-4 mb-6 text-left">
+                <div className="flex items-center gap-2 mb-2">
+                  <ShieldCheck className="w-4 h-4 text-gold" />
+                  <span className="text-xs font-bold text-gold uppercase tracking-wider">Certificat SHA-256</span>
+                </div>
+                <code className="text-[11px] text-navy/60 break-all font-mono">{success.hash}</code>
+              </div>
+            )}
+            <div className="flex gap-3">
+              <Button variant="secondary" className="flex-1" onClick={() => router.push("/institution/communiques")}>
+                Voir mes communiques
+              </Button>
+              <Button className="flex-1" onClick={() => { setSuccess(null); setTitle(""); setChapeau(""); setContent(""); setContactPresse(""); }}>
+                Nouveau communique
+              </Button>
+            </div>
+          </Card>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-ivory">
+    <div className="min-h-screen gradient-mesh">
       {/* Navigation */}
       <nav className="glass-nav sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link
-              href="/communiques"
-              className="p-2 rounded-lg hover:bg-ivory transition-colors"
-            >
+            <Link href="/institution/communiques" className="p-2 rounded-lg hover:bg-ivory transition-colors">
               <ArrowLeft className="w-5 h-5 text-navy" />
             </Link>
             <div className="flex items-center gap-2">
               <Newspaper className="w-5 h-5 text-gold" />
-              <span className="text-lg font-bold text-navy">
-                Nouveau communique
-              </span>
+              <span className="text-lg font-bold text-navy">Nouveau communique</span>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" onClick={handleSave} loading={saving}>
               <Save className="w-4 h-4" />
               Brouillon
             </Button>
-            <Button size="sm">
+            <Button size="sm" onClick={handleDiffuse} loading={diffusing} disabled={!isValid}>
               <Send className="w-4 h-4" />
               Diffuser
             </Button>
@@ -120,82 +189,51 @@ export default function NewCommuniquePage() {
       </nav>
 
       <main className="max-w-7xl mx-auto px-6 py-8">
+        {error && (
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6 px-4 py-3 rounded-xl bg-red/10 text-red text-sm font-medium flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            {error}
+            <button onClick={() => setError(null)} className="ml-auto text-red/60 hover:text-red cursor-pointer">✕</button>
+          </motion.div>
+        )}
+
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Left: Editor */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Format selection */}
-            <Card hover={false}>
-              <h2 className="text-sm font-semibold text-navy mb-3 flex items-center gap-2">
-                <FileText className="w-4 h-4 text-gold" />
-                Format du communique
-              </h2>
-              <div className="grid grid-cols-3 gap-3">
-                {formats.map((f) => (
-                  <button
-                    key={f.id}
-                    onClick={() => setActiveFormat(f.id)}
-                    className={`p-4 rounded-xl text-left transition-all cursor-pointer border-2
-                      ${
-                        activeFormat === f.id
-                          ? "border-gold bg-gold/5"
-                          : "border-transparent bg-ivory hover:bg-ivory-dark"
-                      }`}
-                  >
-                    <f.icon
-                      className={`w-5 h-5 mb-2 ${activeFormat === f.id ? "text-gold" : "text-warm-gray"}`}
-                    />
-                    <div className="font-semibold text-navy text-sm">
-                      {f.label}
-                    </div>
-                    <div className="text-xs text-warm-gray mt-1">
-                      {f.desc}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </Card>
-
             {/* Title */}
             <Card hover={false}>
-              <label className="block text-sm font-semibold text-navy mb-2">
-                Titre du communique
-              </label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Ex: Resultats financiers T1 2026..."
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-navy placeholder-warm-gray/50"
-              />
+              <label className="block text-sm font-semibold text-navy mb-2">Titre du communique *</label>
+              <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex: Inauguration du centre de sante de Cocody Angre" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-navy placeholder-warm-gray/50" />
             </Card>
 
-            {/* WYSIWYG Editor */}
+            {/* Chapeau — RG-EMI-02 */}
             <Card hover={false}>
-              <label className="block text-sm font-semibold text-navy mb-2">
-                Contenu
-              </label>
+              <label className="block text-sm font-semibold text-navy mb-1">Chapeau *</label>
+              <p className="text-[11px] text-warm-gray mb-2">Resume en 2 a 5 lignes — obligatoire pour la diffusion (RG-EMI-02)</p>
+              <textarea value={chapeau} onChange={e => setChapeau(e.target.value)} rows={3} placeholder="Resume concis du communique en 2 a 5 lignes..." className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-navy placeholder-warm-gray/40 resize-none" />
+            </Card>
+
+            {/* Content */}
+            <Card hover={false}>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-semibold text-navy">Corps du communique *</label>
+                <span className={`text-xs font-medium ${wordCount >= 150 && wordCount <= 800 ? "text-green" : "text-warm-gray"}`}>
+                  {wordCount} mot{wordCount > 1 ? "s" : ""} {wordCount < 150 ? "(min. 150)" : wordCount > 800 ? "(max. 800)" : ""}
+                </span>
+              </div>
               {/* Toolbar */}
               <div className="flex items-center gap-1 p-2 bg-ivory rounded-t-xl border border-b-0 border-gray-200">
-                {["B", "I", "U", "H1", "H2", "UL", "OL", "Link", "Quote"].map(
-                  (tool) => (
-                    <button
-                      key={tool}
-                      className="px-3 py-1.5 rounded-lg text-xs font-semibold text-navy hover:bg-white transition-colors cursor-pointer"
-                    >
-                      {tool}
-                    </button>
-                  ),
-                )}
+                {["B", "I", "U", "H1", "H2", "UL", "OL", "Link", "Quote"].map(tool => (
+                  <button key={tool} className="px-3 py-1.5 rounded-lg text-xs font-semibold text-navy hover:bg-white transition-colors cursor-pointer">{tool}</button>
+                ))}
               </div>
-              <textarea
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                rows={12}
-                placeholder="Redigez votre communique ici...
+              <textarea value={content} onChange={e => setContent(e.target.value)} rows={12} placeholder="Redigez le corps de votre communique ici..." className="w-full px-4 py-3 rounded-b-xl border border-gray-200 bg-white text-navy placeholder-warm-gray/40 resize-none" />
+            </Card>
 
-Utilisez la barre d'outils ci-dessus pour formater votre texte. Vous pouvez ajouter des titres, des listes, des liens et des citations."
-                className="w-full px-4 py-3 rounded-b-xl border border-gray-200 bg-white text-navy placeholder-warm-gray/40 resize-none"
-              />
+            {/* Contact presse */}
+            <Card hover={false}>
+              <label className="block text-sm font-semibold text-navy mb-2">Contact presse</label>
+              <input type="text" value={contactPresse} onChange={e => setContactPresse(e.target.value)} placeholder="Ex: Direction Communication — comm@institution.ci — +225 07 08 09 10 11" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-navy placeholder-warm-gray/50" />
             </Card>
 
             {/* File upload */}
@@ -205,103 +243,68 @@ Utilisez la barre d'outils ci-dessus pour formater votre texte. Vous pouvez ajou
                 Pieces jointes
               </h2>
               <div
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  setDragActive(true);
-                }}
+                onDragOver={e => { e.preventDefault(); setDragActive(true); }}
                 onDragLeave={() => setDragActive(false)}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  setDragActive(false);
-                }}
-                className={`border-2 border-dashed rounded-xl p-8 text-center transition-all
-                  ${dragActive ? "border-gold bg-gold/5" : "border-gray-200 hover:border-gold/50"}`}
+                onDrop={e => { e.preventDefault(); setDragActive(false); }}
+                className={`border-2 border-dashed rounded-xl p-8 text-center transition-all ${dragActive ? "border-gold bg-gold/5" : "border-gray-200 hover:border-gold/50"}`}
               >
                 <div className="flex items-center justify-center gap-4 mb-3">
-                  <div className="w-10 h-10 rounded-xl bg-ivory flex items-center justify-center">
-                    <Image className="w-5 h-5 text-warm-gray" />
-                  </div>
-                  <div className="w-10 h-10 rounded-xl bg-ivory flex items-center justify-center">
-                    <Video className="w-5 h-5 text-warm-gray" />
-                  </div>
-                  <div className="w-10 h-10 rounded-xl bg-ivory flex items-center justify-center">
-                    <File className="w-5 h-5 text-warm-gray" />
-                  </div>
+                  <div className="w-10 h-10 rounded-xl bg-ivory flex items-center justify-center"><Image className="w-5 h-5 text-warm-gray" /></div>
+                  <div className="w-10 h-10 rounded-xl bg-ivory flex items-center justify-center"><Video className="w-5 h-5 text-warm-gray" /></div>
+                  <div className="w-10 h-10 rounded-xl bg-ivory flex items-center justify-center"><File className="w-5 h-5 text-warm-gray" /></div>
                 </div>
-                <p className="text-sm font-medium text-navy">
-                  Glissez vos fichiers ici
-                </p>
-                <p className="text-xs text-warm-gray mt-1">
-                  Images, videos, PDF — Max 25 Mo par fichier
-                </p>
-                <Button variant="outline" size="sm" className="mt-4">
-                  Parcourir
-                </Button>
+                <p className="text-sm font-medium text-navy">Glissez vos fichiers ici</p>
+                <p className="text-xs text-warm-gray mt-1">Photos HD, videos, PDF — Max 50 Mo</p>
               </div>
             </Card>
 
-            {/* Preview tabs */}
+            {/* Preview tabs — 3 formats auto-générés */}
             <Card hover={false}>
               <h2 className="text-sm font-semibold text-navy mb-3 flex items-center gap-2">
                 <Eye className="w-4 h-4 text-gold" />
-                Apercu multi-format
+                Apercu des 3 formats (F-EMI-01)
               </h2>
               <div className="flex gap-2 mb-4">
-                {formats.map((f) => (
-                  <button
-                    key={f.id}
-                    onClick={() => setPreviewTab(f.id)}
-                    className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer
-                      ${previewTab === f.id ? "bg-navy text-white" : "bg-ivory text-warm-gray hover:text-navy"}`}
-                  >
+                {([
+                  { id: "presse" as PreviewTab, label: "Presse ecrite" },
+                  { id: "web" as PreviewTab, label: "Web SEO" },
+                  { id: "social" as PreviewTab, label: "Reseaux sociaux" },
+                ]).map(f => (
+                  <button key={f.id} onClick={() => setPreviewTab(f.id)} className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${previewTab === f.id ? "bg-navy text-white" : "bg-ivory text-warm-gray hover:text-navy"}`}>
                     {f.label}
                   </button>
                 ))}
               </div>
               <AnimatePresence mode="wait">
-                <motion.div
-                  key={previewTab}
-                  initial={{ opacity: 0, y: 5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -5 }}
-                  className="rounded-xl border border-gray-200 bg-white p-6 min-h-[200px]"
-                >
-                  {previewTab === "long" && (
+                <motion.div key={previewTab} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} className="rounded-xl border border-gray-200 bg-white p-6 min-h-[200px]">
+                  {previewTab === "presse" && (
                     <div className="space-y-3">
                       <Badge variant="gold">Communique de presse</Badge>
-                      <h3 className="text-xl font-bold text-navy">
-                        {title || "Titre du communique"}
-                      </h3>
-                      <p className="text-sm text-warm-gray leading-relaxed whitespace-pre-wrap">
-                        {content ||
-                          "Le contenu complet de votre communique apparaitra ici avec tous les details, citations et annexes."}
-                      </p>
+                      <h3 className="text-xl font-bold text-navy">{title || "Titre du communique"}</h3>
+                      {chapeau && <p className="text-sm text-navy/80 font-medium italic border-l-3 border-gold pl-3">{chapeau}</p>}
+                      <p className="text-sm text-warm-gray leading-relaxed whitespace-pre-wrap">{content || "Le corps de votre communique..."}</p>
+                      {contactPresse && <p className="text-xs text-warm-gray border-t border-gray-100 pt-3 mt-4">Contact : {contactPresse}</p>}
+                      <p className="text-[10px] text-gold italic">Communique diffuse via HERALDO</p>
                     </div>
                   )}
-                  {previewTab === "court" && (
+                  {previewTab === "web" && (
                     <div className="space-y-3">
-                      <Badge variant="info">Resume</Badge>
-                      <h3 className="text-lg font-bold text-navy">
-                        {title || "Titre du communique"}
-                      </h3>
-                      <p className="text-sm text-warm-gray">
-                        {content
-                          ? content.substring(0, 280) + (content.length > 280 ? "..." : "")
-                          : "Version courte du communique (280 caracteres max)."}
-                      </p>
+                      <Badge variant="info">Format Web SEO</Badge>
+                      <p className="text-[11px] text-green font-mono">&lt;title&gt;{(title || "Titre").substring(0, 60)}&lt;/title&gt;</p>
+                      <p className="text-[11px] text-warm-gray font-mono">&lt;meta description=&quot;{(chapeau || content || "...").substring(0, 155)}&quot;&gt;</p>
+                      <h3 className="text-xl font-bold text-navy mt-4">{title || "Titre"}</h3>
+                      <p className="text-sm text-warm-gray leading-relaxed">{content ? content.substring(0, 500) + (content.length > 500 ? "..." : "") : "Contenu optimise SEO..."}</p>
                     </div>
                   )}
-                  {previewTab === "flash" && (
-                    <div className="space-y-3 text-center">
-                      <Badge variant="warning">FLASH INFO</Badge>
-                      <h3 className="text-lg font-bold text-navy">
-                        {title || "Titre du communique"}
-                      </h3>
-                      <p className="text-sm text-warm-gray">
-                        {content
-                          ? content.substring(0, 140) + (content.length > 140 ? "..." : "")
-                          : "Message flash urgent (140 caracteres max)."}
-                      </p>
+                  {previewTab === "social" && (
+                    <div className="space-y-3 max-w-sm mx-auto">
+                      <Badge variant="warning">Format Reseaux Sociaux</Badge>
+                      <div className="bg-ivory rounded-xl p-4">
+                        <p className="text-sm font-bold text-navy mb-2">{title || "Titre"}</p>
+                        <p className="text-sm text-warm-gray">{(chapeau || content || "...").substring(0, 250)}{(chapeau || content || "").length > 250 ? "..." : ""}</p>
+                        <p className="text-xs text-gold mt-2 font-medium">#HERALDO</p>
+                      </div>
+                      <p className="text-[10px] text-warm-gray text-center">{((chapeau || content || "").length + (title || "").length)} / 280 caracteres</p>
                     </div>
                   )}
                 </motion.div>
@@ -309,7 +312,7 @@ Utilisez la barre d'outils ci-dessus pour formater votre texte. Vous pouvez ajou
             </Card>
           </div>
 
-          {/* Right: Targeting sidebar */}
+          {/* Right sidebar */}
           <div className="space-y-6">
             {/* Media targeting */}
             <Card hover={false}>
@@ -318,32 +321,18 @@ Utilisez la barre d'outils ci-dessus pour formater votre texte. Vous pouvez ajou
                 Ciblage media
               </h2>
               <div className="space-y-2">
-                {mediaTypes.map((media) => (
-                  <label
-                    key={media.id}
-                    className="flex items-center gap-3 p-3 rounded-xl hover:bg-ivory transition-colors cursor-pointer"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedMedia.includes(media.id)}
-                      onChange={() => toggleMedia(media.id)}
-                      className="w-4 h-4 rounded accent-gold"
-                    />
-                    <span className="flex-1 text-sm font-medium text-navy">
-                      {media.label}
-                    </span>
-                    <span className="text-xs text-warm-gray bg-ivory px-2 py-1 rounded-md">
-                      {media.count}
-                    </span>
+                {mediaTypes.map(media => (
+                  <label key={media.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-ivory transition-colors cursor-pointer">
+                    <input type="checkbox" checked={selectedMedia.includes(media.id)} onChange={() => toggleMedia(media.id)} className="w-4 h-4 rounded accent-gold" />
+                    <span className="flex-1 text-sm font-medium text-navy">{media.label}</span>
+                    <span className="text-xs text-warm-gray bg-ivory px-2 py-1 rounded-md">{media.count}</span>
                   </label>
                 ))}
               </div>
               <div className="mt-3 pt-3 border-t border-gray-100">
                 <p className="text-xs text-warm-gray">
                   <Globe className="w-3 h-3 inline mr-1" />
-                  {selectedMedia.length === 0
-                    ? "Selectionnez les types de medias cibles"
-                    : `${selectedMedia.length} type(s) selectionne(s)`}
+                  {selectedMedia.length === 0 ? "Selectionnez les medias cibles" : `${selectedMedia.length} type(s) — ~${selectedMedia.reduce((s, id) => s + (mediaTypes.find(m => m.id === id)?.count || 0), 0)} journalistes`}
                 </p>
               </div>
             </Card>
@@ -355,77 +344,59 @@ Utilisez la barre d'outils ci-dessus pour formater votre texte. Vous pouvez ajou
                 Zone geographique
               </h2>
               <div className="flex flex-wrap gap-2">
-                {regions.map((region) => (
-                  <button
-                    key={region}
-                    onClick={() => toggleRegion(region)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer
-                      ${
-                        selectedRegions.includes(region)
-                          ? "bg-navy text-white"
-                          : "bg-ivory text-warm-gray hover:text-navy"
-                      }`}
-                  >
+                {regions.map(region => (
+                  <button key={region} onClick={() => toggleRegion(region)} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${selectedRegions.includes(region) ? "bg-navy text-white" : "bg-ivory text-warm-gray hover:text-navy"}`}>
                     {region}
                   </button>
                 ))}
               </div>
             </Card>
 
-            {/* Thematic tags */}
-            <Card hover={false}>
-              <h2 className="text-sm font-semibold text-navy mb-4 flex items-center gap-2">
-                <Tags className="w-4 h-4 text-gold" />
-                Thematiques
-              </h2>
-              <input
-                type="text"
-                placeholder="Ajouter une thematique..."
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm"
-              />
-              <div className="flex flex-wrap gap-2 mt-3">
-                {["Economie", "Finance", "Gouvernance"].map((tag) => (
-                  <span
-                    key={tag}
-                    className="px-3 py-1 rounded-full bg-gold/10 text-gold-dark text-xs font-medium"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            </Card>
-
-            {/* Summary */}
+            {/* Summary card */}
             <Card hover={false} dark>
-              <h2 className="text-sm font-semibold text-gold mb-4">Resume</h2>
+              <h2 className="text-sm font-semibold text-gold mb-4">Resume de diffusion</h2>
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Format</span>
-                  <span className="text-white font-medium capitalize">
-                    {activeFormat}
-                  </span>
+                  <span className="text-gray-400">Titre</span>
+                  <span className="text-white font-medium truncate ml-4 max-w-[150px]">{title || "—"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Chapeau</span>
+                  <span className={`font-medium ${chapeau ? "text-green-light" : "text-red/60"}`}>{chapeau ? "OK" : "Manquant"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Corps</span>
+                  <span className={`font-medium ${wordCount >= 150 ? "text-green-light" : "text-orange"}`}>{wordCount} mots</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400">Medias cibles</span>
-                  <span className="text-white font-medium">
-                    {selectedMedia.length || "-"}
-                  </span>
+                  <span className="text-white font-medium">{selectedMedia.length || "—"}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400">Zones</span>
-                  <span className="text-white font-medium">
-                    {selectedRegions.length || "-"}
-                  </span>
+                  <span className="text-white font-medium">{selectedRegions.join(", ") || "—"}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Audience estimee</span>
-                  <span className="text-gold font-semibold">~450</span>
+                  <span className="text-gray-400">Contact presse</span>
+                  <span className={`font-medium ${contactPresse ? "text-green-light" : "text-warm-gray"}`}>{contactPresse ? "OK" : "Optionnel"}</span>
                 </div>
               </div>
-              <Button className="w-full mt-6" size="md">
+
+              <div className="border-t border-white/10 mt-4 pt-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <ShieldCheck className="w-4 h-4 text-gold" />
+                  <span className="text-xs text-gold font-bold uppercase tracking-wider">Certification SHA-256 auto</span>
+                </div>
+              </div>
+
+              <Button className="w-full" size="md" onClick={handleDiffuse} loading={diffusing} disabled={!isValid}>
                 <Send className="w-4 h-4" />
                 Diffuser le communique
               </Button>
+
+              {!isValid && (
+                <p className="text-[10px] text-red/60 text-center mt-2">Titre, chapeau et corps requis</p>
+              )}
             </Card>
           </div>
         </div>
