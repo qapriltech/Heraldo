@@ -1,6 +1,7 @@
 import {
   Controller,
   Post,
+  Get,
   Body,
   Req,
   UseGuards,
@@ -8,8 +9,8 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { RegisterDto } from './dto/register.dto';
-import { LoginDto } from './dto/login.dto';
+import { RequestOtpDto } from './dto/request-otp.dto';
+import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { Public } from './public.decorator';
 
@@ -17,19 +18,32 @@ import { Public } from './public.decorator';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  /**
+   * POST /v1/auth/request-otp
+   * Étape 1 — Envoie un code 6 chiffres par email
+   */
   @Public()
-  @Post('register')
-  register(@Body() dto: RegisterDto) {
-    return this.authService.register(dto);
-  }
-
-  @Public()
-  @Post('login')
+  @Post('request-otp')
   @HttpCode(HttpStatus.OK)
-  login(@Body() dto: LoginDto) {
-    return this.authService.login(dto);
+  requestOtp(@Body() dto: RequestOtpDto) {
+    return this.authService.requestOtp(dto);
   }
 
+  /**
+   * POST /v1/auth/verify-otp
+   * Étape 2 — Vérifie le code et retourne les tokens JWT
+   */
+  @Public()
+  @Post('verify-otp')
+  @HttpCode(HttpStatus.OK)
+  verifyOtp(@Body() dto: VerifyOtpDto) {
+    return this.authService.verifyOtp(dto);
+  }
+
+  /**
+   * POST /v1/auth/refresh
+   * Renouvelle l'access token
+   */
   @Public()
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
@@ -37,10 +51,13 @@ export class AuthController {
     return this.authService.refresh(refreshToken);
   }
 
+  /**
+   * GET /v1/auth/me
+   * Profil de l'utilisateur connecté
+   */
   @UseGuards(JwtAuthGuard)
-  @Post('logout')
-  @HttpCode(HttpStatus.OK)
-  logout(@Req() req: any) {
-    return this.authService.logout(req.user.id);
+  @Get('me')
+  getMe(@Req() req: any) {
+    return this.authService.getMe(req.user.id);
   }
 }

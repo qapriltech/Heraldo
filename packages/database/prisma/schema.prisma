@@ -167,7 +167,7 @@ enum AmplificationType {
 model User {
   id              String     @id @default(uuid())
   email           String     @unique
-  passwordHash    String     @map("password_hash")
+  passwordHash    String?    @map("password_hash") // Optionnel — auth par OTP email
   role            UserRole
   status          UserStatus @default(PENDING)
   fullName        String     @map("full_name")
@@ -192,7 +192,24 @@ model User {
   reviewedProofs    FcmProof[]       @relation("ProofReviewer")
   sentNotifications Notification[]   @relation("NotificationSender")
 
+  // OTP
+  otpCodes OtpCode[]
+
   @@map("users")
+}
+
+model OtpCode {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  code      String   // 6 chiffres
+  expiresAt DateTime @map("expires_at")
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, code, used])
+  @@map("otp_codes")
 }
 
 model Session {
