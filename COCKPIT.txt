@@ -1,0 +1,1553 @@
+
+
+
+
+CDC TECHNIQUE — EXTENSION DU CDC-HERALDO-001
+Spécifications Cockpit HERALDO PRESS
+Document technique et fonctionnel pour développement immédiat
+— • —
+
+
+
+
+
+
+
+
+Réf : HP-CDC-COCKPIT-2026-012 Avril 2026  |  Abidjan, Côte d'Ivoire  Document confidentiel — Usage interne et investisseurs
+
+1. OBJECTIF DU DOCUMENT
+
+Ce document étend le CDC-HERALDO-001 existant en ajoutant sept modules fonctionnels qui transforment HERALDO PRESS d'un outil occasionnel de diffusion en un poste de travail quotidien de l'attaché de presse. Il est rédigé pour être directement exploitable par Claude Code ou tout autre agent de développement, avec spécifications précises des endpoints API, schémas de base de données, règles métier et cas d'usage.
+
+Modules concernés
+Code
+Module
+Priorité
+Complexité
+M7
+SOCIAL — Publication multi-réseaux sociaux
+P0
+Moyenne
+M8
+AGENDA — Calendrier éditorial
+P0
+Faible
+M9
+STUDIO — Génération de visuels brandés
+P0
+Moyenne
+M10
+INBOX — Boîte de réception unifiée
+P0
+Moyenne
+M11
+CRM — Relation journalistes enrichie
+P0
+Faible
+M12
+BRIEF — Script d'interview automatique
+P1
+Faible
+M13
+MOBILE — Application attaché de presse
+P0
+Élevée
+
+Principes directeurs techniques
+Principe 1 — Zéro coût variable opérationnel par client (pas d'API IA coûteuses dans l'offre de base)
+Principe 2 — Réutilisation maximale de l'infrastructure existante (PostgreSQL, NestJS, Next.js, React Native)
+Principe 3 — Séparation stricte front-back via l'API REST v1 existante
+Principe 4 — Cohérence de nommage avec les modules existants (ÉMISSION, AGORA, RÉSEAU, FCM, AMPLIFICATION, IMPACT)
+Principe 5 — Tous les nouveaux endpoints préfixés /v1/ et respectant les conventions REST du CDC existant
+Principe 6 — Chaque module expose ses propres endpoints mais partage la base PostgreSQL centrale
+Principe 7 — Authentification JWT déjà en place réutilisée à l'identique
+Principe 8 — Permissions respectent la matrice des acteurs existante (ACT-01 à ACT-05)
+
+2. MODULE M7 — SOCIAL (PUBLICATION MULTI-RÉSEAUX SOCIAUX)
+
+2.1 Objectif fonctionnel
+Permettre à un acteur ACT-01 (institution), ACT-03 (influenceur/relais) ou ACT-04 (agence RP) de publier simultanément sur plusieurs comptes de réseaux sociaux officiels connectés, avec adaptation automatique des formats, planification calendaire, workflow de validation et suivi d'engagement.
+2.2 Plateformes supportées — Phase 1
+Plateforme
+API utilisée
+Coût
+Limite de fréquence
+Facebook Pages
+Graph API v18.0 ou supérieure
+Gratuit
+200 appels/heure/token
+Instagram Business
+Instagram Graph API
+Gratuit
+200 appels/heure/token
+LinkedIn Pages
+LinkedIn Marketing API v2
+Gratuit
+500 publications/jour/compte
+
+2.3 Plateformes repoussées en phase ultérieure
+X (Twitter) — API payante 200 USD/mois, repoussé en Phase 2 si demande client le justifie.
+TikTok Business API — Validation TikTok requise et aléatoire, repoussé en Phase 3.
+YouTube — Publication vidéo, repoussée en Phase 3 (nécessite infrastructure de stockage vidéo dédiée).
+2.4 Schéma de base de données
+Table social_accounts — Comptes sociaux connectés
+Stocke les tokens OAuth et métadonnées des comptes que l'institution a connectés à HERALDO.
+Champ
+Type
+Contrainte
+Description
+id
+UUID
+PK, NOT NULL
+Identifiant unique
+client_id
+UUID
+FK users.id, NOT NULL
+Institution propriétaire du compte
+platform
+ENUM
+NOT NULL
+facebook | instagram | linkedin
+platform_account_id
+VARCHAR(100)
+NOT NULL
+ID du compte sur la plateforme externe
+platform_account_name
+VARCHAR(200)
+NOT NULL
+Nom public du compte (ex: « Mairie de Cocody »)
+platform_account_url
+TEXT
+NULL
+URL publique du compte
+access_token_encrypted
+TEXT
+NOT NULL
+Token OAuth chiffré AES-256 (ne jamais exposer en clair)
+refresh_token_encrypted
+TEXT
+NULL
+Token de rafraîchissement chiffré (Facebook longue durée)
+token_expires_at
+TIMESTAMP
+NULL
+Date expiration token
+followers_count
+INTEGER
+DEFAULT 0
+Nombre d'abonnés (rafraîchi quotidiennement)
+status
+ENUM
+DEFAULT 'active'
+active | expired | disconnected | error
+last_synced_at
+TIMESTAMP
+NULL
+Dernière synchronisation métadonnées
+connected_at
+TIMESTAMP
+NOT NULL
+Date de connexion initiale
+connected_by_user_id
+UUID
+FK users.id, NOT NULL
+Utilisateur qui a connecté
+created_at
+TIMESTAMP
+DEFAULT NOW()
+
+updated_at
+TIMESTAMP
+DEFAULT NOW()
+
+
+Index : UNIQUE (client_id, platform, platform_account_id), INDEX (client_id, status)
+Table social_posts — Publications planifiées et publiées
+Champ
+Type
+Contrainte
+Description
+id
+UUID
+PK
+Identifiant unique
+client_id
+UUID
+FK users.id, NOT NULL
+Institution auteure
+created_by_user_id
+UUID
+FK users.id
+Utilisateur qui a créé
+content_text
+TEXT
+NOT NULL
+Texte principal du post (Markdown autorisé)
+content_media_urls
+TEXT[]
+DEFAULT '{}'
+Liste URLs médias (images/vidéos)
+target_platforms
+ENUM[]
+NOT NULL
+['facebook', 'instagram', 'linkedin']
+target_account_ids
+UUID[]
+NOT NULL
+IDs vers social_accounts
+status
+ENUM
+DEFAULT 'draft'
+draft | scheduled | publishing | published | failed | cancelled
+scheduled_at
+TIMESTAMP
+NULL
+Date planifiée de publication
+published_at
+TIMESTAMP
+NULL
+Date réelle de publication
+approval_required
+BOOLEAN
+DEFAULT false
+Nécessite validation avant publication
+approved_by_user_id
+UUID
+FK users.id, NULL
+Utilisateur ayant approuvé
+approved_at
+TIMESTAMP
+NULL
+
+linked_communique_id
+UUID
+FK communiques.id, NULL
+Lien vers un communiqué ÉMISSION si applicable
+linked_agenda_item_id
+UUID
+FK agenda_items.id, NULL
+Lien vers un item AGENDA
+engagement_stats
+JSONB
+DEFAULT '{}'
+{likes, comments, shares, reach} par plateforme
+error_log
+TEXT
+NULL
+Détail erreur si status=failed
+created_at
+TIMESTAMP
+DEFAULT NOW()
+
+updated_at
+TIMESTAMP
+DEFAULT NOW()
+
+
+Index : INDEX (client_id, status, scheduled_at), INDEX (client_id, published_at DESC)
+Table social_post_platforms — Publications par plateforme (éclatement)
+Une publication peut être publiée sur plusieurs plateformes. Cette table trace le résultat par plateforme individuellement.
+Champ
+Type
+Description
+id
+UUID
+PK
+social_post_id
+UUID
+FK social_posts.id
+social_account_id
+UUID
+FK social_accounts.id
+platform
+ENUM
+facebook | instagram | linkedin
+external_post_id
+VARCHAR(200)
+ID retourné par la plateforme externe
+external_post_url
+TEXT
+URL publique du post
+status
+ENUM
+pending | published | failed
+error_message
+TEXT
+Message erreur si échec
+published_at
+TIMESTAMP
+Horodatage publication
+content_adapted
+TEXT
+Contenu après adaptation au format de la plateforme
+
+2.5 Endpoints API REST — Préfixe /v1/social
+OAuth — Connexion d'un compte
+Endpoint
+Description
+GET /v1/social/oauth/{platform}/authorize
+Redirige vers l'URL d'autorisation OAuth de la plateforme. Params : platform (facebook|instagram|linkedin), return_url
+GET /v1/social/oauth/{platform}/callback
+Callback OAuth. Reçoit le code, échange contre access token, stocke en BDD chiffré
+DELETE /v1/social/accounts/{account_id}
+Déconnecte un compte (révoque token, marque disconnected)
+GET /v1/social/accounts
+Liste les comptes connectés de l'institution courante
+
+Publications — CRUD
+Endpoint
+Description
+POST /v1/social/posts
+Crée un brouillon ou planifie une publication
+GET /v1/social/posts
+Liste les posts (filtres : status, platform, date_from, date_to)
+GET /v1/social/posts/{post_id}
+Détail d'un post
+PATCH /v1/social/posts/{post_id}
+Modifie un post (autorisé uniquement si status=draft ou scheduled)
+DELETE /v1/social/posts/{post_id}
+Supprime un post brouillon ou annule une publication planifiée
+POST /v1/social/posts/{post_id}/publish
+Publie immédiatement (remplace la planification)
+POST /v1/social/posts/{post_id}/approve
+Workflow d'approbation : passe de pending_approval à scheduled
+GET /v1/social/posts/{post_id}/stats
+Récupère les stats d'engagement actualisées depuis les plateformes
+
+Exemple payload POST /v1/social/posts
+Requête :
+{
+  "content_text": "Inauguration du centre de santé de Cocody Angré ce matin. Un équipement moderne au service des 150 000 habitants.",
+  "content_media_urls": ["https://cdn.heraldo.ci/media/abc123.jpg"],
+  "target_account_ids": ["uuid-fb-cocody", "uuid-ig-cocody", "uuid-li-cocody"],
+  "scheduled_at": "2026-05-12T10:30:00+00:00",
+  "approval_required": true,
+  "linked_agenda_item_id": "uuid-agenda-inauguration"
+}
+
+Réponse 201 Created :
+{
+  "id": "uuid-post-12345",
+  "status": "pending_approval",
+  "scheduled_at": "2026-05-12T10:30:00+00:00",
+  "target_platforms": ["facebook", "instagram", "linkedin"],
+  "created_at": "2026-05-10T14:22:00+00:00"
+}
+2.6 Règles d'adaptation automatique par plateforme
+Facebook
+Longueur max 63 206 caractères, pas de troncature automatique.
+Images : 1 à 10 images par post, format JPEG/PNG/GIF, max 30 Mo par image.
+Vidéos : max 10 Go, formats MP4/MOV, durée max 4h.
+Hashtags : illimités mais ne pas mettre plus de 5 dans le contenu visible, surcharger est pénalisé algorithmiquement.
+Instagram
+Longueur max 2 200 caractères. Troncature à partir de 125 caractères dans le feed (UI).
+Images : format carré 1:1 préféré (1080×1080), portrait 4:5 accepté. Converter automatiquement si le fichier source est 16:9.
+Vidéos Reels : max 90 secondes, format 9:16 (1080×1920), conversion automatique si nécessaire.
+Hashtags : jusqu'à 30 autorisés, recommandé entre 5 et 11. Placer en premier commentaire pour ne pas encombrer le texte principal.
+LinkedIn
+Longueur max 3 000 caractères. Troncature à 210 caractères dans le feed (UI).
+Images : 1200×627 pixels recommandé pour les articles, 1080×1080 pour posts simples.
+Ton : formel et professionnel, éviter les emojis abondants.
+Hashtags : 3 à 5 maximum, placés en fin de texte.
+2.7 Workflow de validation
+Deux modes de publication possibles selon le paramètre approval_required :
+Mode direct (approval_required = false)
+L'attaché ou l'utilisateur ayant droit publish crée et publie directement.
+Statut passe immédiatement de draft à scheduled (si date future) ou publishing (si immédiat).
+Mode validation (approval_required = true)
+L'attaché crée, statut devient pending_approval.
+Le DG / Maire (utilisateur ayant droit approve) reçoit notification email + push app.
+Le validateur accepte (statut → scheduled) ou refuse (statut → draft avec commentaire).
+La publication automatique ne se déclenche QUE si status = scheduled au moment du scheduled_at.
+2.8 Worker de publication planifiée
+Un worker Celery ou NestJS Scheduler tourne toutes les 60 secondes et exécute :
+
+1. SELECT social_posts WHERE status='scheduled' AND scheduled_at <= NOW()
+2. Pour chaque post :
+   a. Marquer status = 'publishing'
+   b. Pour chaque target_account_id :
+      - Récupérer access_token (déchiffrer)
+      - Adapter le contenu au format de la plateforme
+      - Appeler l'API externe (Facebook Graph, Instagram, LinkedIn)
+      - Enregistrer external_post_id et external_post_url
+      - Si succès : status = 'published'
+      - Si échec : status = 'failed', error_log renseigné, retry 3x à 5 min d'intervalle
+3. Notifier l'utilisateur créateur (email + push)
+2.9 Règles de gestion
+RG-SOCIAL-01 : Un compte social ne peut être connecté que par un utilisateur ayant droit manage_social_accounts dans sa matrice de permissions.
+RG-SOCIAL-02 : Les access tokens sont chiffrés AES-256 avec clé distincte de celle utilisée pour les autres données sensibles (rotation indépendante).
+RG-SOCIAL-03 : Une publication échouée génère une alerte Slack/email à l'équipe HERALDO support si 3 retries ont échoué.
+RG-SOCIAL-04 : Les tokens Facebook doivent être rafraîchis avant expiration via un worker quotidien (Facebook émet des tokens 60 jours, rafraîchir à J-7).
+RG-SOCIAL-05 : Le nombre de publications simultanées par compte est limité à 100/jour pour éviter le bannissement par la plateforme.
+RG-SOCIAL-06 : Pas de publication de contenu identique sur le même compte dans les 24h (anti-spam).
+RG-SOCIAL-07 : Les publications supprimées côté plateforme externe marquent le post HERALDO comme orphan mais ne suppriment pas l'entrée en BDD.
+
+3. MODULE M8 — AGENDA (CALENDRIER ÉDITORIAL)
+
+3.1 Objectif fonctionnel
+Planifier les prises de parole sur 30, 60 ou 90 jours. Centraliser en un endroit tous les éléments d'une campagne de communication (communiqué, salle AGORA, publications sociales, briefs presse) liés à un événement ou sujet.
+3.2 Schéma de base de données
+Table agenda_items
+Champ
+Type
+Description
+id
+UUID PK
+Identifiant unique
+client_id
+UUID FK users.id
+Institution propriétaire
+title
+VARCHAR(300)
+Titre de l'événement / sujet
+description
+TEXT
+Description détaillée, contexte, messages clés
+event_date
+TIMESTAMP
+Date de l'événement ou de la prise de parole
+event_end_date
+TIMESTAMP NULL
+Date de fin si événement multi-jours
+event_type
+ENUM
+announcement | inauguration | press_conference | reaction | recurring | crisis | campaign | other
+status
+ENUM DEFAULT 'planned'
+planned | in_progress | completed | cancelled
+priority
+ENUM DEFAULT 'medium'
+low | medium | high | critical
+tags
+VARCHAR[]
+Tags libres pour catégorisation
+linked_communique_ids
+UUID[] DEFAULT '{}'
+Communiqués rattachés
+linked_agora_room_ids
+UUID[] DEFAULT '{}'
+Salles AGORA rattachées
+linked_social_post_ids
+UUID[] DEFAULT '{}'
+Publications sociales rattachées
+checklist
+JSONB
+[{task, done, due_date, assignee_id}]
+assignee_user_id
+UUID FK users.id
+Utilisateur responsable
+reminder_1d_before
+BOOLEAN DEFAULT true
+Rappel 24h avant
+reminder_1h_before
+BOOLEAN DEFAULT true
+Rappel 1h avant
+created_by
+UUID FK users.id
+
+created_at
+TIMESTAMP
+
+updated_at
+TIMESTAMP
+
+
+Index : INDEX (client_id, event_date), INDEX (client_id, status, event_date)
+3.3 Endpoints API — Préfixe /v1/agenda
+Endpoint
+Description
+GET /v1/agenda/items
+Liste avec filtres : date_from, date_to, status, event_type, priority, assignee_user_id
+POST /v1/agenda/items
+Crée un item
+GET /v1/agenda/items/{item_id}
+Détail d'un item avec tous les éléments liés hydratés
+PATCH /v1/agenda/items/{item_id}
+Modifie un item
+DELETE /v1/agenda/items/{item_id}
+Supprime (soft delete avec timestamp)
+POST /v1/agenda/items/{item_id}/link/{type}
+Lie un élément existant (type=communique|agora_room|social_post) via body {id}
+DELETE /v1/agenda/items/{item_id}/link/{type}/{id}
+Retire un lien
+GET /v1/agenda/calendar
+Vue calendrier optimisée, params : year, month → retourne items groupés par jour
+GET /v1/agenda/recurring-suggestions
+Suggestions automatiques : journées mondiales, fêtes CI, anniversaires récurrents
+PATCH /v1/agenda/items/{item_id}/checklist/{task_idx}
+Coche/décoche une tâche de checklist
+
+3.4 Suggestions automatiques de sujets récurrents
+L'endpoint GET /v1/agenda/recurring-suggestions retourne les dates clés et suggestions de sujets pour les 90 prochains jours. La source est un fichier JSON statique (pas d'appel IA, coût zéro) mis à jour annuellement.
+Structure du fichier suggestions.json
+Fichier à placer dans src/data/recurring-events-ci.json :
+
+[
+  {
+    "date": "01-01",  // MM-DD, annuel récurrent
+    "name": "Nouvel An",
+    "type": "national_holiday",
+    "suggested_content": "Vœux aux administrés. Bilan année écoulée, ambitions nouvelle année.",
+    "applicable_to": ["mairie", "elu", "institution"]
+  },
+  {
+    "date": "03-08",
+    "name": "Journée internationale des droits des femmes",
+    "type": "international_day",
+    "suggested_content": "Engagement de l'institution pour l'égalité. Mise en valeur des femmes de l'équipe.",
+    "applicable_to": ["mairie", "elu", "institution", "agence"]
+  },
+  // ... environ 60 entrées couvrant fêtes nationales CI, journées internationales pertinentes,
+  // fêtes religieuses majeures (aïd, Noël, Pâques), événements récurrents CI
+]
+3.5 Règles de gestion
+RG-AGENDA-01 : Un item supprimé ne détruit PAS les éléments liés (communiqués, salles AGORA), il retire seulement les liens.
+RG-AGENDA-02 : La checklist d'un item est entièrement contenue dans le champ JSONB (pas de table séparée pour MVP).
+RG-AGENDA-03 : Les rappels sont envoyés par un worker Celery/Scheduler tournant toutes les 5 minutes (cron 1d_before et 1h_before).
+RG-AGENDA-04 : Un item en status=crisis déclenche notifications push + email immédiats aux utilisateurs ayant permission crisis_alert.
+
+4. MODULE M9 — STUDIO (GÉNÉRATION DE VISUELS BRANDÉS)
+
+4.1 Objectif fonctionnel
+Permettre à un utilisateur de générer en quelques clics des visuels adaptés aux différents formats réseaux sociaux (post carré, story verticale, bannière horizontale) à partir de templates pré-brandés aux couleurs et logo de l'institution. Pas d'appel IA coûteux dans le MVP : uniquement composition de templates statiques.
+4.2 Stack technique recommandée
+Couche
+Technologie
+Justification
+Rendu côté serveur
+Node.js + node-canvas (Cairo) OU puppeteer
+node-canvas : plus léger et rapide pour templates simples. Puppeteer : plus flexible pour HTML/CSS complexes
+Format de template
+JSON descriptif + HTML/CSS
+Portabilité, versionable git
+Stockage templates
+S3-like bucket (ou équivalent OVH)
+CDN pour servir rapidement
+Stockage visuels générés
+S3 + CDN Cloudflare
+Identique à l'infra existante
+Upload images client
+Direct to S3 via presigned URL
+Pas de passage par le serveur, économie de bande passante
+Conversion images
+sharp (Node.js)
+Redimensionnement, recadrage, conversion formats
+
+4.3 Schéma de base de données
+Table studio_templates — Templates disponibles (catalogue global)
+Champ
+Type
+Description
+id
+UUID PK
+
+name
+VARCHAR(200)
+Nom descriptif (ex: « Annonce événement carré »)
+category
+ENUM
+announcement | event | quote | achievement | crisis | greetings | other
+format
+ENUM
+square_1080 | portrait_1080x1350 | story_1080x1920 | landscape_1200x630 | linkedin_1200x627
+preview_url
+TEXT
+URL vignette template vierge
+template_json
+JSONB
+Définition complète du template (voir section 4.4)
+is_active
+BOOLEAN DEFAULT true
+
+order_index
+INTEGER
+Ordre d'affichage dans la galerie
+created_at
+TIMESTAMP
+
+
+Table client_brand_kits — Kit graphique de chaque institution
+Champ
+Type
+Description
+id
+UUID PK
+
+client_id
+UUID FK users.id UNIQUE
+Une institution = un brand kit
+logo_url
+TEXT
+URL du logo HD (fond transparent PNG de préférence)
+logo_white_url
+TEXT NULL
+Version blanche pour fonds foncés
+color_primary
+VARCHAR(7)
+Couleur principale hex (#AABBCC)
+color_secondary
+VARCHAR(7)
+Couleur secondaire hex
+color_accent
+VARCHAR(7)
+Couleur accent hex
+font_heading
+VARCHAR(100) DEFAULT 'Georgia'
+Police des titres
+font_body
+VARCHAR(100) DEFAULT 'Calibri'
+Police du corps
+logo_position_default
+ENUM DEFAULT 'top_right'
+top_left | top_right | bottom_left | bottom_right | center
+signature_text
+VARCHAR(200) NULL
+Ex: « Mairie de Cocody — Ensemble pour une ville moderne »
+updated_at
+TIMESTAMP
+
+
+Table studio_visuals — Visuels générés par les clients
+Champ
+Type
+Description
+id
+UUID PK
+
+client_id
+UUID FK users.id
+
+template_id
+UUID FK studio_templates.id NULL
+Null si créé from scratch
+title
+VARCHAR(300)
+
+format
+ENUM
+Identique à studio_templates.format
+render_params
+JSONB
+Paramètres utilisés pour générer (textes, images, couleurs)
+output_url
+TEXT
+URL du visuel généré final
+thumbnail_url
+TEXT
+Vignette basse résolution
+created_by_user_id
+UUID FK users.id
+
+used_in_post_ids
+UUID[]
+Publications sociales ayant utilisé ce visuel
+created_at
+TIMESTAMP
+
+
+4.4 Format de description des templates (template_json)
+Chaque template est défini par un JSON qui décrit les zones éditables. Exemple complet :
+
+{
+  "width": 1080,
+  "height": 1080,
+  "background": {
+    "type": "color",  // "color" | "image" | "gradient"
+    "value": "{{brand.color_primary}}"  // ou couleur hex fixe
+  },
+  "elements": [
+    {
+      "type": "image",
+      "id": "user_image",
+      "source": "{{params.main_image}}",  // uploadée par l'utilisateur
+      "x": 0, "y": 0, "width": 1080, "height": 720,
+      "fit": "cover",
+      "overlay": { "color": "#000000", "opacity": 0.3 }
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "content": "{{params.title}}",
+      "x": 60, "y": 780, "width": 960, "height": 140,
+      "font": "{{brand.font_heading}}",
+      "font_size": 56, "font_weight": "bold",
+      "color": "#FFFFFF",
+      "align": "left", "valign": "middle",
+      "max_length": 80  // troncature automatique avec ...
+    },
+    {
+      "type": "image",
+      "id": "logo",
+      "source": "{{brand.logo_white_url}}",
+      "x": 60, "y": 60, "width": 200, "height": 80,
+      "fit": "contain"
+    },
+    {
+      "type": "shape",
+      "id": "accent_bar",
+      "shape": "rectangle",
+      "x": 60, "y": 940, "width": 100, "height": 6,
+      "fill": "{{brand.color_accent}}"
+    }
+  ],
+  "editable_fields": [
+    { "id": "title", "label": "Titre principal", "type": "text", "required": true, "max": 80 },
+    { "id": "main_image", "label": "Image de fond", "type": "image", "required": true }
+  ]
+}
+4.5 Moteur de rendu — Algorithme
+Fonction principale : renderVisual(templateId, brandKit, params) → visualUrl
+1. Charger le template_json depuis studio_templates
+2. Charger le brand_kit du client
+3. Substituer toutes les variables {{brand.xxx}} et {{params.xxx}} dans le JSON
+4. Créer un canvas node-canvas aux dimensions du template
+5. Pour chaque élément dans elements[] :
+   a. Si type=background : fillRect ou drawImage selon sous-type
+   b. Si type=image : loadImage + drawImage avec fit (cover/contain) + overlay si présent
+   c. Si type=text : setFont, measureText, wrap text si nécessaire, fillText avec align/valign
+   d. Si type=shape : fillRect ou beginPath selon shape
+6. Exporter en PNG ou JPEG (option quality)
+7. Upload S3 avec key studio/{client_id}/{visual_id}.{ext}
+8. Retourner l'URL CDN publique
+4.6 Endpoints API — Préfixe /v1/studio
+Endpoint
+Description
+GET /v1/studio/templates
+Liste des templates (filtres : format, category)
+GET /v1/studio/templates/{id}
+Détail d'un template avec editable_fields
+POST /v1/studio/brand-kit
+Crée/met à jour le brand kit du client courant
+GET /v1/studio/brand-kit
+Récupère le brand kit du client courant
+POST /v1/studio/render
+Génère un visuel : body {template_id, params}
+GET /v1/studio/visuals
+Liste des visuels générés par le client
+DELETE /v1/studio/visuals/{id}
+Supprime un visuel
+POST /v1/studio/upload-image
+Upload direct d'une image (retourne URL S3 pour utilisation dans params)
+
+4.7 Bibliothèque initiale de templates (50 à produire par designer)
+Répartition cible :
+Catégorie
+Nombre
+Formats
+Annonces institutionnelles
+10
+square, portrait, landscape
+Citations et déclarations
+8
+square, portrait
+Événements et invitations
+10
+square, story, landscape
+Réalisations et bilans
+8
+square, portrait, landscape
+Salutations et vœux
+6
+square, story
+Communication de crise
+4
+square, portrait
+Portraits / profils
+4
+square, portrait
+
+
+5. MODULE M10 — INBOX (BOÎTE DE RÉCEPTION UNIFIÉE)
+
+5.1 Objectif fonctionnel
+Centraliser dans HERALDO toutes les sollicitations presse entrantes de l'institution, quelle que soit leur source (email professionnel, WhatsApp Business, formulaires de contact du site web). Permettre de qualifier, prioriser, attribuer, répondre et archiver chaque sollicitation.
+5.2 Sources supportées — Phase 1
+Source
+Méthode
+Coût
+Gmail
+Gmail API OAuth
+Gratuit (quotas larges)
+Outlook / Microsoft 365
+Microsoft Graph API
+Gratuit
+WhatsApp Business
+WhatsApp Business Cloud API
+Gratuit jusqu'à 1000 conversations/mois
+Formulaire web HERALDO
+Widget JS embarquable sur site client
+Gratuit
+
+5.3 Schéma de base de données
+Table inbox_channels — Canaux connectés par institution
+Champ
+Type
+Description
+id
+UUID PK
+
+client_id
+UUID FK users.id
+
+channel_type
+ENUM
+gmail | outlook | whatsapp | web_form
+channel_identifier
+VARCHAR(300)
+Email adresse, numéro WhatsApp, slug form
+access_token_encrypted
+TEXT NULL
+Pour gmail/outlook
+refresh_token_encrypted
+TEXT NULL
+
+webhook_secret
+VARCHAR(100) NULL
+Pour WhatsApp webhook validation
+status
+ENUM DEFAULT 'active'
+active | expired | error | disconnected
+last_synced_at
+TIMESTAMP
+
+created_at
+TIMESTAMP
+
+
+Table inbox_messages — Messages entrants consolidés
+Champ
+Type
+Description
+id
+UUID PK
+
+client_id
+UUID FK users.id
+
+channel_id
+UUID FK inbox_channels.id
+
+external_id
+VARCHAR(300)
+ID externe (Gmail msg-id, WhatsApp msg-id)
+thread_id
+VARCHAR(300) NULL
+Regroupement conversations
+from_name
+VARCHAR(300)
+
+from_address
+VARCHAR(300)
+Email ou numéro WhatsApp
+from_journalist_id
+UUID FK journalists.id NULL
+Lié si reconnu dans RÉSEAU
+subject
+VARCHAR(500) NULL
+
+body_text
+TEXT
+Corps du message en texte brut
+body_html
+TEXT NULL
+Version HTML si disponible
+attachments
+JSONB
+[{filename, url, size, mime_type}]
+received_at
+TIMESTAMP
+
+category
+ENUM NULL
+interview_request | info_request | invitation | complaint | other (classification algorithmique)
+priority
+ENUM DEFAULT 'medium'
+urgent | high | medium | low
+status
+ENUM DEFAULT 'unread'
+unread | read | in_progress | replied | archived
+assigned_to_user_id
+UUID FK users.id NULL
+
+replied_at
+TIMESTAMP NULL
+
+internal_note
+TEXT NULL
+Note interne de l'équipe
+tags
+VARCHAR[]
+
+created_at
+TIMESTAMP
+
+
+Index : INDEX (client_id, status, received_at DESC), INDEX (client_id, from_journalist_id), INDEX (client_id, priority)
+5.4 Classification automatique (sans IA)
+La catégorisation se fait par règles lexicales (no-LLM) sur sujet + corps :
+Catégorie
+Règles de détection
+interview_request
+Contient : « interview », « entretien », « entrevue », « interroger », « podcast », « émission » ET nom du média dans le from_address
+info_request
+Contient : « information », « renseignement », « précisions », « détails », « confirmer », « question »
+invitation
+Contient : « invitation », « convie », « participer », « événement », « cérémonie », « présence » dans un email entrant
+complaint
+Contient : « plainte », « dénonce », « scandale », « inacceptable », « indigne », « réclame »
+other
+Par défaut si aucune règle ne match
+
+Règles de priorité automatique :
+urgent : catégorie=complaint OU mots-clés urgents (« urgent », « crise », « plainte publique », « avant ce soir »)
+high : catégorie=interview_request venant d'un média tier-1 (reconnu dans RÉSEAU avec tier=1)
+medium : autres sollicitations de journalistes accrédités
+low : expéditeurs non reconnus, catégorie other
+5.5 Endpoints API — Préfixe /v1/inbox
+Endpoint
+Description
+GET /v1/inbox/channels
+Liste canaux connectés
+POST /v1/inbox/channels/{type}/connect
+Flow OAuth pour gmail/outlook ou setup webhook pour whatsapp
+DELETE /v1/inbox/channels/{id}
+Déconnecte un canal
+GET /v1/inbox/messages
+Liste messages avec filtres : status, priority, category, from_journalist_id, date_from/to, search
+GET /v1/inbox/messages/{id}
+Détail message + thread complet si applicable
+PATCH /v1/inbox/messages/{id}
+Modifie status, priority, category, assigned_to, internal_note, tags
+POST /v1/inbox/messages/{id}/reply
+Envoie une réponse via le canal d'origine (email ou WhatsApp)
+POST /v1/inbox/messages/{id}/archive
+Archive le message
+GET /v1/inbox/stats
+Statistiques : non lus, par priorité, par catégorie
+POST /v1/inbox/webhooks/whatsapp
+Endpoint public (avec validation secret) pour Meta Webhook WhatsApp
+POST /v1/inbox/webhooks/gmail
+Gmail Push Notifications via Pub/Sub
+
+5.6 Synchronisation Gmail — Stratégie
+Deux approches disponibles selon le volume :
+Approche 1 — Polling (simple, MVP)
+Worker toutes les 5 minutes récupère les nouveaux messages depuis users.messages.list avec q="is:unread newer_than:1d"
+Simple à implémenter mais délai jusqu'à 5 min
+Approche 2 — Gmail Push (recommandé V1)
+Configurer un topic Google Cloud Pub/Sub
+users.watch déclenche notification push vers Pub/Sub à chaque nouveau message
+Webhook HERALDO consomme en temps réel via /v1/inbox/webhooks/gmail
+Watch expire après 7 jours — worker quotidien renouvelle
+
+6. MODULE M11 — CRM (RELATION JOURNALISTES ENRICHIE)
+
+6.1 Objectif fonctionnel
+Étendre le module RÉSEAU existant en transformant la fiche journaliste statique en véritable CRM : historique des interactions, mémos privés de l'attaché, scoring de relation, alertes anniversaires, timeline complète. Différencier propriété institutionnelle (accessible à tous) et mémos privés (par utilisateur).
+6.2 Schéma de base de données — Extensions
+Extension de la table journalists existante
+Ajouter les colonnes suivantes à la table journalists existante (définie dans le CDC-HERALDO-001) :
+Nouvelle colonne
+Type
+Description
+birthday
+DATE NULL
+Anniversaire (jour/mois suffisent — année optionnelle)
+preferred_contact_method
+ENUM NULL
+email | whatsapp | phone | in_person
+preferred_contact_time
+VARCHAR(100) NULL
+Ex: « Matin 9h-11h »
+tier
+ENUM DEFAULT 'tier2'
+tier1 (national top) | tier2 (standard) | tier3 (local)
+tags_editorial
+VARCHAR[]
+Sujets préférés (politique, économie, sport...)
+
+Nouvelle table crm_interactions — Timeline d'interactions
+Champ
+Type
+Description
+id
+UUID PK
+
+client_id
+UUID FK users.id
+Institution (les interactions sont cloisonnées par client)
+journalist_id
+UUID FK journalists.id
+
+user_id
+UUID FK users.id
+Membre de l'équipe client ayant interagi
+interaction_type
+ENUM
+email_sent | email_received | whatsapp_sent | whatsapp_received | call | meeting | communique_sent | invitation_sent | publication_detected | fcm_paid | other
+direction
+ENUM
+outbound | inbound | neutral
+subject
+VARCHAR(500) NULL
+
+content_preview
+TEXT NULL
+Extrait du contenu
+linked_entity_type
+ENUM NULL
+inbox_message | communique | agora_room | fcm_transaction
+linked_entity_id
+UUID NULL
+
+occurred_at
+TIMESTAMP
+
+created_at
+TIMESTAMP
+
+
+Index : INDEX (client_id, journalist_id, occurred_at DESC)
+Nouvelle table crm_private_notes — Mémos privés par utilisateur
+Champ
+Type
+Description
+id
+UUID PK
+
+user_id
+UUID FK users.id
+Utilisateur auteur (le mémo est privé)
+journalist_id
+UUID FK journalists.id
+
+content
+TEXT
+Contenu du mémo
+visibility
+ENUM DEFAULT 'private'
+private | team (partageable avec collègues même client)
+created_at
+TIMESTAMP
+
+updated_at
+TIMESTAMP
+
+
+Règle critique : mémo private = jamais visible par d'autres utilisateurs, même admin HERALDO. Chiffrement AES-256 de la colonne content en BDD.
+Nouvelle vue matérialisée crm_journalist_scores — Score relationnel
+Vue rafraîchie chaque nuit (00:00) par un worker pour calculer un score de relation par journaliste et par client.
+Champ calculé
+Formule
+interactions_last_90d
+COUNT(crm_interactions) WHERE occurred_at > NOW()-90 DAYS
+last_interaction_at
+MAX(occurred_at)
+publications_generated
+COUNT WHERE interaction_type='publication_detected'
+fcm_total_paid_fcfa
+SUM WHERE interaction_type='fcm_paid'
+relation_score
+0-100, formule pondérée (voir section 6.3)
+relation_tier
+cold | warm | hot | engaged (selon score)
+
+6.3 Formule de calcul du score de relation
+Score 0-100 calculé par la formule :
+
+  relation_score = 
+    min(100,
+      (interactions_last_90d * 3)            // jusqu'à 30 pts
+      + (publications_generated * 8)          // jusqu'à 40 pts
+      + (fcm_total_paid_fcfa / 10000)         // jusqu'à 20 pts
+      + (last_interaction_bonus)              // 0 à 10 pts
+    )
+
+  last_interaction_bonus =
+    si last_interaction_at > NOW()-7d  → 10
+    si last_interaction_at > NOW()-30d → 6
+    si last_interaction_at > NOW()-90d → 3
+    sinon                              → 0
+Tier déduit du score :
+0–24 : cold (relation inexistante ou dormante)
+25–49 : warm (contact régulier mais pas de résultats)
+50–74 : hot (relation active, publications régulières)
+75–100 : engaged (journaliste fidèle, FCM actif, publications fréquentes)
+6.4 Endpoints API — Préfixe /v1/crm
+Endpoint
+Description
+GET /v1/crm/journalists/{id}
+Fiche complète enrichie (hydrate stats + dernières interactions + notes privées user)
+GET /v1/crm/journalists/{id}/timeline
+Timeline paginée des interactions
+POST /v1/crm/journalists/{id}/interactions
+Ajoute manuellement une interaction (call, meeting)
+GET /v1/crm/journalists/{id}/notes
+Notes privées de l'utilisateur courant uniquement
+POST /v1/crm/journalists/{id}/notes
+Crée un mémo privé
+PATCH /v1/crm/notes/{note_id}
+Modifie son propre mémo
+DELETE /v1/crm/notes/{note_id}
+Supprime son propre mémo
+GET /v1/crm/birthdays-upcoming
+Anniversaires des journalistes des 14 prochains jours
+GET /v1/crm/journalists?tier={cold|warm|hot|engaged}
+Filtre par tier relationnel
+GET /v1/crm/dashboard
+KPI : nb journalistes par tier, interactions du mois, publications générées
+
+6.5 Triggers automatiques d'alimentation de crm_interactions
+Les interactions s'alimentent automatiquement via triggers PostgreSQL ou listeners NestJS :
+Insertion dans inbox_messages avec from_journalist_id non null → crée email_received
+Envoi d'un communiqué via ÉMISSION ciblant un journaliste → crée communique_sent
+Invitation AGORA envoyée → crée invitation_sent
+Preuve FCM validée → crée publication_detected
+Paiement FCM effectué → crée fcm_paid
+Réponse email envoyée depuis INBOX → crée email_sent
+
+7. MODULE M12 — BRIEF (SCRIPT D'INTERVIEW AUTOMATIQUE)
+
+7.1 Objectif fonctionnel
+Permettre à l'attaché de préparer en 5 minutes un brief d'interview complet pour son Maire/Ministre : questions probables, réponses suggérées, éléments de langage, données chiffrées à mémoriser, pièges à éviter. Génération via Claude API avec prompt structuré — coût par brief environ 500 FCFA.
+7.2 Schéma de base de données
+Table briefs
+Champ
+Type
+Description
+id
+UUID PK
+
+client_id
+UUID FK users.id
+
+created_by
+UUID FK users.id
+
+media_name
+VARCHAR(300)
+Ex: « Fraternité Matin »
+journalist_id
+UUID FK journalists.id NULL
+Si journaliste connu
+journalist_name_raw
+VARCHAR(300) NULL
+Si journaliste inconnu
+media_type
+ENUM
+press_written | radio | tv | web | podcast
+interview_topic
+TEXT
+Sujet attendu de l'interview
+interview_context
+TEXT
+Contexte actuel (actualité, polémique en cours, etc.)
+interviewee_name
+VARCHAR(200)
+Personne à briefer (ex: le Maire)
+interviewee_role
+VARCHAR(200)
+Sa fonction
+duration_minutes
+INTEGER
+Durée prévue
+scheduled_at
+TIMESTAMP NULL
+
+generated_content
+JSONB
+Résultat structuré généré par Claude (voir section 7.3)
+user_edits
+TEXT NULL
+Modifications manuelles de l'attaché après génération
+status
+ENUM DEFAULT 'draft'
+draft | generating | ready | used | archived
+pdf_url
+TEXT NULL
+Version PDF téléchargeable
+created_at
+TIMESTAMP
+
+updated_at
+TIMESTAMP
+
+
+7.3 Structure de generated_content (réponse Claude)
+Le prompt Claude retourne un JSON strict avec la structure suivante :
+
+{
+  "likely_questions": [
+    {
+      "question": "Monsieur le Maire, que répondez-vous aux critiques sur la gestion des ordures à Cocody ?",
+      "difficulty": "high",  // low | medium | high
+      "suggested_answer": "Texte de réponse recommandé de 50-80 mots...",
+      "key_points_to_make": ["Point 1", "Point 2"],
+      "traps_to_avoid": ["Ne pas blâmer les prestataires nommément"]
+    }
+  ],
+  "key_messages": ["Message 1", "Message 2", "Message 3"],
+  "statistics_to_memorize": [
+    { "label": "Investissement voirie 2025", "value": "1,2 milliard FCFA", "source": "Budget municipal" }
+  ],
+  "topics_to_avoid": ["Polémique récente X pour éviter de relancer"],
+  "body_language_tips": ["Rester calme face aux provocations", "Sourire à la fin"],
+  "journalist_profile_notes": "Connu pour ses questions pièges sur la transparence financière."
+}
+7.4 Prompt Claude de référence
+À stocker dans src/prompts/brief-interview.prompt.md :
+
+Tu es un conseiller en communication politique expert du contexte ivoirien.
+Prépare un brief complet d'interview pour la personne et le contexte suivants :
+
+- Média : {{media_name}} ({{media_type}})
+- Journaliste : {{journalist_name}} {{journalist_notes}}
+- Personne briefée : {{interviewee_name}} — {{interviewee_role}}
+- Sujet attendu : {{interview_topic}}
+- Contexte actuel : {{interview_context}}
+- Durée prévue : {{duration_minutes}} minutes
+
+Génère EXCLUSIVEMENT un JSON strict respectant ce schéma :
+{...schema défini en 7.3...}
+
+Contraintes :
+- 8 à 12 questions probables réalistes
+- Réponses suggérées adaptées au ton institutionnel ivoirien
+- Pas de généralités, du concret et du chiffré
+- Détection des pièges rhétoriques probables du journaliste
+7.5 Endpoints API — Préfixe /v1/briefs
+Endpoint
+Description
+POST /v1/briefs
+Crée un brief et lance génération Claude async (status=generating)
+GET /v1/briefs
+Liste des briefs du client
+GET /v1/briefs/{id}
+Détail d'un brief
+PATCH /v1/briefs/{id}
+Modifie user_edits, status, sauvegarde modifications manuelles
+POST /v1/briefs/{id}/regenerate
+Relance la génération Claude (coût supplémentaire)
+GET /v1/briefs/{id}/pdf
+Génère et retourne le PDF téléchargeable
+
+
+8. MODULE M13 — MOBILE (APPLICATION ATTACHÉ DE PRESSE)
+
+8.1 Objectif fonctionnel
+Application mobile React Native (iOS + Android) dédiée à l'attaché de presse, partageant 70% de codebase avec l'app HÉRALDO Journaliste déjà prévue dans le CDC. Permet de travailler sur le terrain (publications terrain, dictées vocales, consultation agenda, validations).
+8.2 Architecture partagée avec HÉRALDO Journaliste
+Mono-repo React Native Expo avec deux applications distinctes partageant @heraldo/shared :
+Code
+Utilisation
+Cibles OS
+apps/journalist
+App participant salles AGORA, preuves FCM
+iOS 14+, Android 8+
+apps/attache
+App attaché de presse (ce module M13)
+iOS 14+, Android 8+
+packages/shared/ui
+Composants UI communs (boutons, cards, formulaires)
+—
+packages/shared/api
+Client API REST HERALDO + auth + token
+—
+packages/shared/types
+TypeScript types communs
+—
+packages/shared/utils
+Fonctions utilitaires
+—
+
+8.3 Écrans principaux de l'app Attaché
+Onglet 1 — DASHBOARD
+Vue d'ensemble du jour : nombre de sollicitations non lues (INBOX), prochain événement AGENDA, publications planifiées dans les 24h, alertes éventuelles
+Accès rapide aux 4 actions principales : Nouveau communiqué · Nouvelle publication sociale · Nouveau brief · Enregistrement vocal
+Onglet 2 — INBOX
+Liste unifiée des sollicitations entrantes (toutes sources)
+Filtres : toutes | non lues | urgent | journalistes tier-1
+Tap sur message → détail + possibilité de répondre
+Swipe gauche = archiver, Swipe droit = marquer urgent
+Onglet 3 — AGENDA
+Vue calendrier mensuel + vue liste
+Tap sur jour → liste items + création nouveau item avec bouton +
+Tap sur item → détail + checklist tickable + éléments liés
+Onglet 4 — PUBLICATION RAPIDE
+Écran dédié terrain : prendre photo/vidéo immédiatement
+Sélection des comptes sociaux cibles (toggles multi-sélection)
+Saisie rapide du texte ou dictée vocale avec reconnaissance native iOS/Android (gratuit)
+Suggestion automatique de template STUDIO adapté au contexte
+Publication immédiate ou planification ultérieure
+Onglet 5 — PROFIL
+Profil utilisateur, notifications préférences, paramètres, déconnexion
+Accès aux briefs personnels et favoris
+8.4 Fonctionnalités techniques spécifiques mobile
+Notifications push
+Implémentation via Expo Notifications + Firebase Cloud Messaging (Android) + Apple Push Notification (iOS)
+Types : nouvelle sollicitation urgente, rappel agenda 1h avant, publication planifiée réussie/échouée, validation en attente
+Préférences granulaires dans l'onglet Profil
+Mode hors-ligne limité
+Cache local des 30 dernières sollicitations et événements agenda avec SQLite (expo-sqlite)
+File d'attente d'actions offline : photos prises sans réseau sont stockées et publiées automatiquement au retour du réseau
+Reconnaissance vocale native
+iOS : SFSpeechRecognizer (gratuit, local, pas d'API externe)
+Android : RecognizerIntent (gratuit)
+Fallback si langue non supportée localement : upload audio vers Whisper OpenAI (6 FCFA/minute, opt-in utilisateur)
+Upload images optimisé
+Compression automatique avant upload : max 2048px de côté, JPEG quality 85%
+Upload direct vers S3 via presigned URL (pas de passage par le serveur)
+Progress bar pour UX
+8.5 Endpoints API utilisés (existants + nouveaux)
+L'app mobile consomme tous les endpoints déjà définis dans les modules M7-M12 plus les endpoints mobile-spécifiques :
+Endpoint
+Description
+POST /v1/mobile/devices/register
+Enregistre un device pour notifications push (push_token, platform)
+DELETE /v1/mobile/devices/{device_id}
+Désenregistre un device
+GET /v1/mobile/home
+Endpoint agrégé pour dashboard : inbox_unread_count, next_agenda, scheduled_posts_24h, alerts
+POST /v1/mobile/quick-post
+Endpoint optimisé publication rapide (upload photo + texte + comptes cibles)
+POST /v1/mobile/offline-sync
+Synchronisation après retour de connexion (actions en attente)
+
+
+9. CONSIDÉRATIONS TRANSVERSES
+
+9.1 Permissions — Matrice étendue
+Ajout aux permissions existantes dans le modèle d'authentification :
+Permission
+Description
+Rôles par défaut
+social.manage_accounts
+Connecter/déconnecter comptes sociaux
+ACT-01 owner, admin
+social.create_post
+Créer publications
+ACT-01 all, ACT-04
+social.approve_post
+Approuver publications en workflow
+ACT-01 owner, director
+social.publish_direct
+Publier sans validation
+ACT-01 owner uniquement
+agenda.manage
+CRUD items agenda
+ACT-01 all, ACT-04
+studio.create_visuals
+Générer des visuels
+ACT-01 all, ACT-04
+studio.manage_brand_kit
+Modifier brand kit
+ACT-01 owner
+inbox.view_all
+Voir toutes les sollicitations (sinon assignées seulement)
+ACT-01 owner, admin
+inbox.reply
+Répondre aux sollicitations
+ACT-01 all, ACT-04
+crm.view_notes
+Voir notes privées des autres (team visibility)
+ACT-01 owner
+briefs.create
+Créer briefs d'interview
+ACT-01 all, ACT-04
+
+9.2 Logging et audit
+Toutes les actions d'écriture sur les nouveaux modules doivent être loggées dans la table audit_logs existante :
+Qui (user_id)
+Quoi (action : social.post.create, agenda.item.delete, inbox.message.reply, etc.)
+Sur quoi (entity_type + entity_id)
+Quand (timestamp)
+Depuis où (ip + user_agent)
+Contexte (payload JSON anonymisé si données sensibles)
+9.3 Limites de volumétrie par formule
+Pour éviter les abus et maintenir la qualité de service :
+Ressource
+HERALDO ÉLU
+HERALDO MAIRIE
+HERALDO INSTITUTION
+HERALDO AGENCE
+Comptes sociaux connectés
+3
+5
+10
+10 par client géré
+Publications sociales/mois
+40
+120
+Illimité
+120/client
+Items agenda
+Illimité
+Illimité
+Illimité
+Illimité
+Visuels STUDIO/mois
+30
+80
+Illimité
+50/client
+Canaux INBOX connectés
+1
+3
+5
+3/client
+Briefs interview/mois
+4
+10
+20
+5/client
+
+9.4 Métriques techniques cibles
+Métrique
+Cible
+Temps de publication multi-plateformes
+< 30 secondes
+Génération d'un visuel STUDIO
+< 3 secondes
+Latence API endpoints CRUD
+< 200 ms p95
+Réception webhook WhatsApp → visible UI
+< 10 secondes
+Synchronisation Gmail via push
+< 30 secondes
+Génération brief Claude
+< 15 secondes
+Taille bundle app mobile (iOS)
+< 50 Mo
+Temps de démarrage app mobile à froid
+< 3 secondes
+
+
+10. PLANNING DE DÉVELOPPEMENT — ORDONNANCEMENT
+
+10.1 Séquence de livraison recommandée
+Ordre de priorité technique pour Claude Code, optimisé pour paralleliser les dépendances :
+Sprint
+Durée
+Modules livrés
+Dépendances
+S1
+2 semaines
+M8 AGENDA + M11 CRM (extensions)
+Aucune — purement backend/frontend existant
+S2
+3 semaines
+M9 STUDIO (templates statiques + brand kit)
+Aucune — indépendant
+S3
+4 semaines
+M7 SOCIAL (Facebook + Instagram + LinkedIn)
+Dépend de M8 (liens agenda)
+S4
+3 semaines
+M10 INBOX (Gmail + Outlook + WhatsApp)
+Dépend de M11 (CRM interactions)
+S5
+2 semaines
+M12 BRIEF (Claude API)
+Aucune
+S6
+4 semaines
+M13 MOBILE (app React Native)
+Dépend de S1-S5 (consomme tous les endpoints)
+
+Total cumulé : 18 semaines (4,5 mois) en ligne droite, réductible à 12-14 semaines en parallélisant S2 et S3-S4 avec deux développeurs.
+10.2 Tests à livrer avec chaque module
+Tests unitaires des services critiques (calcul score CRM, rendu STUDIO, adaptation formats SOCIAL) — couverture minimum 70%
+Tests d'intégration des endpoints CRUD principaux
+Tests end-to-end Playwright pour les workflows critiques : créer + planifier + publier un post social ; créer + remplir + exporter un brief ; connecter Gmail + recevoir + répondre à un message
+Tests manuels de charge : 100 publications planifiées simultanées, 10 000 appels/heure sur endpoints read
+10.3 Documentation à produire
+OpenAPI/Swagger complet des nouveaux endpoints (auto-généré depuis les décorateurs NestJS)
+Guide utilisateur PDF par module pour le Customer Success (fourni aux clients à l'onboarding)
+Guide développeur interne sur l'architecture @heraldo/shared mobile
+Runbook opérationnel : procédures de rotation des tokens OAuth, rafraîchissement watch Gmail, debug erreurs publication sociales
+11. ANNEXES TECHNIQUES
+
+11.1 Variables d'environnement à ajouter
+À compléter dans le fichier .env.example existant du projet :
+
+# Module SOCIAL
+FACEBOOK_APP_ID=xxxxxxxxxxxxx
+FACEBOOK_APP_SECRET=xxxxxxxxxxxxx
+INSTAGRAM_APP_ID=xxxxxxxxxxxxx
+INSTAGRAM_APP_SECRET=xxxxxxxxxxxxx
+LINKEDIN_CLIENT_ID=xxxxxxxxxxxxx
+LINKEDIN_CLIENT_SECRET=xxxxxxxxxxxxx
+SOCIAL_OAUTH_REDIRECT_BASE=https://app.heraldo-press.ci/oauth/callback
+SOCIAL_TOKEN_ENCRYPTION_KEY=xxxxxxxxxxxxx  # 32 bytes hex
+
+# Module INBOX
+GMAIL_OAUTH_CLIENT_ID=xxxxxxxxxxxxx
+GMAIL_OAUTH_CLIENT_SECRET=xxxxxxxxxxxxx
+GMAIL_PUBSUB_TOPIC=projects/xxx/topics/heraldo-gmail
+OUTLOOK_OAUTH_CLIENT_ID=xxxxxxxxxxxxx
+OUTLOOK_OAUTH_CLIENT_SECRET=xxxxxxxxxxxxx
+WHATSAPP_BUSINESS_PHONE_ID=xxxxxxxxxxxxx
+WHATSAPP_BUSINESS_ACCESS_TOKEN=xxxxxxxxxxxxx
+WHATSAPP_WEBHOOK_VERIFY_TOKEN=xxxxxxxxxxxxx
+
+# Module STUDIO
+S3_STUDIO_BUCKET=heraldo-studio-media
+S3_STUDIO_CDN_URL=https://cdn.heraldo-press.ci/studio
+
+# Module BRIEF
+ANTHROPIC_API_KEY=xxxxxxxxxxxxx
+CLAUDE_MODEL_BRIEF=claude-sonnet-4-6
+11.2 Migrations PostgreSQL — Ordre d'exécution
+Fichiers de migration à créer dans src/migrations/ :
+20260501_000001_create_social_accounts.sql
+20260501_000002_create_social_posts.sql
+20260501_000003_create_social_post_platforms.sql
+20260501_000004_create_agenda_items.sql
+20260501_000005_extend_journalists_crm.sql
+20260501_000006_create_crm_interactions.sql
+20260501_000007_create_crm_private_notes.sql
+20260501_000008_create_crm_journalist_scores_view.sql
+20260501_000009_create_studio_templates.sql
+20260501_000010_create_client_brand_kits.sql
+20260501_000011_create_studio_visuals.sql
+20260501_000012_create_inbox_channels.sql
+20260501_000013_create_inbox_messages.sql
+20260501_000014_create_briefs.sql
+11.3 Pattern de code à respecter
+Pour cohérence avec le code existant du projet HERALDO PRESS :
+Un module NestJS par module fonctionnel : src/modules/social/, src/modules/agenda/, src/modules/studio/, etc.
+Structure de module standard : controller.ts, service.ts, dto/, entities/, tests/
+Validation via class-validator sur les DTOs d'entrée
+Transformation via class-transformer pour les réponses
+Guards JWT sur toutes les routes sauf webhooks publics
+Decorators custom @CurrentUser(), @RequirePermission(...) déjà existants à réutiliser
+Gestion d'erreur via exceptions NestJS typées (BadRequestException, NotFoundException, etc.)
+Tous les async externes (API calls, DB) wrappés par try/catch avec logging structuré (Pino)
+11.4 Monitoring à mettre en place
+Métrique : taux de succès publication sociale par plateforme (Prometheus counter)
+Métrique : latence appels Claude API pour briefs (histogram)
+Métrique : nombre de webhooks WhatsApp reçus vs traités avec succès
+Alerte : plus de 5 tokens OAuth expirés dans les dernières 24h → email support
+Alerte : taux d'échec publication > 10% sur 1h → Slack ops
+Dashboard Grafana dédié Cockpit avec les métriques ci-dessus
+
+12. RÉSUMÉ POUR L'ÉQUIPE DE DÉVELOPPEMENT
+
+Ce document définit exhaustivement les 7 modules du Cockpit HERALDO PRESS. Il peut être ingéré directement par Claude Code pour planifier et exécuter le développement. Chaque module est autonome mais partage la base PostgreSQL centrale et l'authentification JWT existante.
+
+Priorité recommandée pour démarrer immédiatement
+Semaine 1-2 : Module M8 AGENDA (rapide, pas de dépendance externe, livre une valeur immédiate)
+Semaine 1-2 en parallèle : Module M11 CRM extensions (réutilise table journalists existante)
+Semaine 3-5 : Module M9 STUDIO (nécessite designer en parallèle pour les templates)
+Semaine 6-9 : Module M7 SOCIAL (cœur du cockpit)
+Livrable final attendu
+7 modules fonctionnels complets avec tests
+Documentation OpenAPI à jour
+App mobile Attaché publiée sur App Store + Google Play
+Runbook opérationnel
+Guide utilisateur par module
+
+« Votre message, notre mission. »
+Équipe technique HERALDO PRESS — Avril 2026

@@ -1,0 +1,425 @@
+"use client";
+
+import { motion } from "framer-motion";
+import {
+  Newspaper,
+  ArrowLeft,
+  Mail,
+  MessageSquare,
+  Search,
+  Reply,
+  UserPlus,
+  Archive,
+  Clock,
+  AlertCircle,
+  Inbox,
+  Filter,
+} from "lucide-react";
+import Link from "next/link";
+import { useState } from "react";
+import Card from "@/components/ui/Card";
+import Button from "@/components/ui/Button";
+import Badge from "@/components/ui/Badge";
+
+type Channel = "gmail" | "whatsapp" | "outlook" | "web";
+type MsgCategory = "interview" | "info" | "invitation" | "reclamation";
+type Priority = "urgent" | "high" | "medium" | "low";
+type StatusFilter = "all" | "unread" | "urgent" | "archived";
+
+interface Message {
+  id: string;
+  sender: string;
+  subject: string;
+  preview: string;
+  channel: Channel;
+  category: MsgCategory;
+  priority: Priority;
+  time: string;
+  read: boolean;
+  archived: boolean;
+}
+
+const channelConfig: Record<Channel, { label: string; color: string; bg: string }> = {
+  gmail: { label: "Gmail", color: "text-red", bg: "bg-red/10" },
+  whatsapp: { label: "WhatsApp", color: "text-green", bg: "bg-green/10" },
+  outlook: { label: "Outlook", color: "text-blue-600", bg: "bg-blue-500/10" },
+  web: { label: "Web", color: "text-purple", bg: "bg-purple/10" },
+};
+
+const categoryConfig: Record<MsgCategory, { label: string; variant: "gold" | "info" | "warning" | "neutral" }> = {
+  interview: { label: "Demande interview", variant: "gold" },
+  info: { label: "Demande info", variant: "info" },
+  invitation: { label: "Invitation", variant: "warning" },
+  reclamation: { label: "Reclamation", variant: "neutral" },
+};
+
+const priorityColors: Record<Priority, string> = {
+  urgent: "bg-red",
+  high: "bg-orange",
+  medium: "bg-blue-500",
+  low: "bg-warm-gray-light",
+};
+
+const messages: Message[] = [
+  {
+    id: "1",
+    sender: "Marie Dupont - RFI",
+    subject: "Demande d'interview - Reforme fiscale",
+    preview: "Bonjour, nous souhaiterions organiser une interview avec le Ministre concernant la nouvelle reforme fiscale...",
+    channel: "gmail",
+    category: "interview",
+    priority: "urgent",
+    time: "Il y a 15 min",
+    read: false,
+    archived: false,
+  },
+  {
+    id: "2",
+    sender: "Jean Kouassi - Fraternite Matin",
+    subject: "Invitation - Gala des medias 2026",
+    preview: "Nous avons le plaisir de vous inviter au Gala annuel des medias de Cote d'Ivoire qui se tiendra le...",
+    channel: "outlook",
+    category: "invitation",
+    priority: "medium",
+    time: "Il y a 1h",
+    read: false,
+    archived: false,
+  },
+  {
+    id: "3",
+    sender: "Aminata Diallo - AFP",
+    subject: "Demande de donnees - PIB Q1 2026",
+    preview: "Dans le cadre de notre reportage sur la croissance economique en Afrique de l'Ouest, nous souhaiterions obtenir...",
+    channel: "gmail",
+    category: "info",
+    priority: "high",
+    time: "Il y a 2h",
+    read: false,
+    archived: false,
+  },
+  {
+    id: "4",
+    sender: "Ibrahim Toure - RTI",
+    subject: "Reclamation - Accreditation refusee",
+    preview: "Nous n'avons toujours pas recu notre accreditation pour la conference presse du 14 avril. Pouvez-vous...",
+    channel: "whatsapp",
+    category: "reclamation",
+    priority: "high",
+    time: "Il y a 3h",
+    read: true,
+    archived: false,
+  },
+  {
+    id: "5",
+    sender: "Sophie Martin - Le Monde Afrique",
+    subject: "Demande interview - Investissements chinois",
+    preview: "Suite a l'annonce des nouveaux accords bilateraux, nous aimerions realiser un entretien approfondi...",
+    channel: "gmail",
+    category: "interview",
+    priority: "medium",
+    time: "Il y a 5h",
+    read: true,
+    archived: false,
+  },
+  {
+    id: "6",
+    sender: "Portail citoyen",
+    subject: "Question - Budget education 2026",
+    preview: "Un citoyen demande des precisions sur l'allocation budgetaire pour l'education dans le nouveau plan...",
+    channel: "web",
+    category: "info",
+    priority: "low",
+    time: "Hier",
+    read: true,
+    archived: false,
+  },
+  {
+    id: "7",
+    sender: "Paul N'Guessan - Abidjan.net",
+    subject: "Invitation - Table ronde numerique",
+    preview: "Nous organisons une table ronde sur la transformation numerique des administrations publiques...",
+    channel: "whatsapp",
+    category: "invitation",
+    priority: "low",
+    time: "Hier",
+    read: true,
+    archived: false,
+  },
+  {
+    id: "8",
+    sender: "Kofi Asante - BBC Afrique",
+    subject: "Demande d'interview urgente",
+    preview: "Suite aux declarations du FMI, BBC Afrique souhaite obtenir une reaction officielle dans les plus brefs...",
+    channel: "gmail",
+    category: "interview",
+    priority: "urgent",
+    time: "Il y a 30 min",
+    read: false,
+    archived: false,
+  },
+];
+
+const statusFilters: { id: StatusFilter; label: string; count?: number }[] = [
+  { id: "all", label: "Tous", count: 8 },
+  { id: "unread", label: "Non lus", count: 4 },
+  { id: "urgent", label: "Urgent", count: 2 },
+  { id: "archived", label: "Archives" },
+];
+
+export default function InboxPage() {
+  const [activeFilter, setActiveFilter] = useState<StatusFilter>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedMessage, setSelectedMessage] = useState<string | null>("1");
+
+  const filteredMessages = messages.filter((m) => {
+    if (activeFilter === "unread") return !m.read;
+    if (activeFilter === "urgent") return m.priority === "urgent";
+    if (activeFilter === "archived") return m.archived;
+    return !m.archived;
+  });
+
+  const selected = messages.find((m) => m.id === selectedMessage);
+
+  return (
+    <div className="min-h-screen bg-ivory">
+      <nav className="glass-nav sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg gradient-gold flex items-center justify-center">
+              <Newspaper className="w-4 h-4 text-navy-dark" />
+            </div>
+            <span className="text-lg font-bold text-navy">HERALDO</span>
+            <span className="text-sm text-warm-gray ml-2 hidden sm:inline">
+              | Boite de reception
+            </span>
+          </div>
+          <div className="flex items-center gap-4">
+            <Link href="/institution/dashboard">
+              <Button variant="ghost" size="sm">
+                <ArrowLeft className="w-4 h-4" />
+                Tableau de bord
+              </Button>
+            </Link>
+            <div className="w-9 h-9 rounded-full bg-navy text-white flex items-center justify-center text-sm font-semibold">
+              IN
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <main className="max-w-7xl mx-auto px-6 py-8">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <h1 className="text-3xl font-bold text-navy mb-1">
+            Boite de reception
+          </h1>
+          <p className="text-warm-gray">
+            Tous vos messages centralises en un seul endroit.
+          </p>
+        </motion.div>
+
+        {/* Status Filter Tabs */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="flex flex-wrap gap-2 mb-6"
+        >
+          {statusFilters.map((f) => (
+            <button
+              key={f.id}
+              onClick={() => setActiveFilter(f.id)}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 cursor-pointer flex items-center gap-2 ${
+                activeFilter === f.id
+                  ? "bg-navy text-white shadow-md"
+                  : "bg-white text-warm-gray hover:bg-gray-100 border border-gray-200"
+              }`}
+            >
+              {f.label}
+              {f.count !== undefined && (
+                <span
+                  className={`w-5 h-5 rounded-full text-xs flex items-center justify-center ${
+                    activeFilter === f.id
+                      ? "bg-gold text-navy-dark"
+                      : "bg-gray-200 text-warm-gray"
+                  }`}
+                >
+                  {f.count}
+                </span>
+              )}
+            </button>
+          ))}
+        </motion.div>
+
+        {/* Search */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="mb-6"
+        >
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-warm-gray" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Rechercher un message, un expediteur..."
+              className="w-full pl-11 pr-4 py-3 rounded-2xl border border-gray-200 bg-white text-sm text-navy placeholder:text-warm-gray/50"
+            />
+          </div>
+        </motion.div>
+
+        <div className="grid lg:grid-cols-5 gap-6">
+          {/* Message List */}
+          <div className="lg:col-span-2">
+            <div className="space-y-2">
+              {filteredMessages.map((msg, i) => {
+                const chConf = channelConfig[msg.channel];
+                const catConf = categoryConfig[msg.category];
+                const isActive = selectedMessage === msg.id;
+                return (
+                  <motion.div
+                    key={msg.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.2 + i * 0.04 }}
+                  >
+                    <button
+                      onClick={() => setSelectedMessage(msg.id)}
+                      className={`w-full text-left p-4 rounded-2xl transition-all duration-200 cursor-pointer border ${
+                        isActive
+                          ? "glass-card border-gold/30 shadow-md"
+                          : "bg-white border-transparent hover:bg-gray-50"
+                      } ${!msg.read ? "border-l-4 border-l-gold" : ""}`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="mt-0.5">
+                          <span
+                            className={`block w-2.5 h-2.5 rounded-full ${priorityColors[msg.priority]}`}
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <span
+                              className={`text-sm truncate ${!msg.read ? "font-bold text-navy" : "font-medium text-navy/70"}`}
+                            >
+                              {msg.sender}
+                            </span>
+                            <span className="text-[10px] text-warm-gray whitespace-nowrap">
+                              {msg.time}
+                            </span>
+                          </div>
+                          <p
+                            className={`text-sm truncate mb-1.5 ${!msg.read ? "font-semibold text-navy" : "text-navy/60"}`}
+                          >
+                            {msg.subject}
+                          </p>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${chConf.bg} ${chConf.color}`}
+                            >
+                              {chConf.label}
+                            </span>
+                            <Badge variant={catConf.variant}>
+                              {catConf.label}
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Message Detail */}
+          <div className="lg:col-span-3">
+            {selected ? (
+              <motion.div
+                key={selected.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                <Card hover={false}>
+                  <div className="flex items-start justify-between mb-4 pb-4 border-b border-gray-100">
+                    <div>
+                      <h2 className="text-lg font-bold text-navy mb-1">
+                        {selected.subject}
+                      </h2>
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <span className="text-sm text-warm-gray">
+                          {selected.sender}
+                        </span>
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${channelConfig[selected.channel].bg} ${channelConfig[selected.channel].color}`}
+                        >
+                          {channelConfig[selected.channel].label}
+                        </span>
+                        <Badge variant={categoryConfig[selected.category].variant}>
+                          {categoryConfig[selected.category].label}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className={`w-2.5 h-2.5 rounded-full ${priorityColors[selected.priority]}`}
+                      />
+                      <span className="text-xs text-warm-gray capitalize">
+                        {selected.priority}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mb-6">
+                    <p className="text-sm text-warm-gray flex items-center gap-2 mb-4">
+                      <Clock className="w-3.5 h-3.5" />
+                      {selected.time}
+                    </p>
+                    <div className="bg-gray-50 rounded-xl p-4">
+                      <p className="text-sm text-navy leading-relaxed">
+                        {selected.preview}
+                      </p>
+                      <p className="text-sm text-navy leading-relaxed mt-3">
+                        Nous restons a votre disposition pour convenir d&apos;un
+                        creneau. Cordialement.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-3">
+                    <Button size="sm">
+                      <Reply className="w-4 h-4" />
+                      Repondre
+                    </Button>
+                    <Button variant="outline" size="sm">
+                      <UserPlus className="w-4 h-4" />
+                      Assigner
+                    </Button>
+                    <Button variant="ghost" size="sm">
+                      <Archive className="w-4 h-4" />
+                      Archiver
+                    </Button>
+                  </div>
+                </Card>
+              </motion.div>
+            ) : (
+              <Card hover={false}>
+                <div className="text-center py-16">
+                  <Inbox className="w-12 h-12 text-warm-gray/30 mx-auto mb-3" />
+                  <p className="text-sm text-warm-gray">
+                    Selectionnez un message pour le lire
+                  </p>
+                </div>
+              </Card>
+            )}
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}

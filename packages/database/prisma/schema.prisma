@@ -310,6 +310,12 @@ model Journalist {
   // Mobile Money (chiffré AES-256) — RG-RESEAU-01: jamais visible par institutions
   mobileMoneyOperator String?             @map("mobile_money_operator") // WAVE | ORANGE | MTN | MOOV
   mobileMoneyNumber   String?             @map("mobile_money_number") // chiffré AES-256
+  // CRM extensions (M11)
+  birthday            DateTime?           @db.Date
+  preferredContact    String?             @map("preferred_contact") // email | whatsapp | phone | in_person
+  preferredContactTime String?            @map("preferred_contact_time")
+  tier                String              @default("tier2") // tier1 | tier2 | tier3
+  tagsEditorial       String[]            @map("tags_editorial")
   createdAt           DateTime            @default(now()) @map("created_at")
   updatedAt           DateTime            @updatedAt @map("updated_at")
 
@@ -838,4 +844,422 @@ model AuditLog {
   @@index([entity, entityId])
   @@index([userId, createdAt])
   @@map("audit_logs")
+}
+
+// ============================================================
+// MODULE M7 — SOCIAL (Publication multi-réseaux)
+// HP-CDC-COCKPIT-2026-012
+// ============================================================
+
+enum SocialPlatform {
+  FACEBOOK
+  INSTAGRAM
+  LINKEDIN
+}
+
+enum SocialAccountStatus {
+  ACTIVE
+  EXPIRED
+  DISCONNECTED
+  ERROR
+}
+
+enum SocialPostStatus {
+  DRAFT
+  PENDING_APPROVAL
+  SCHEDULED
+  PUBLISHING
+  PUBLISHED
+  FAILED
+  CANCELLED
+}
+
+model SocialAccount {
+  id                    String              @id @default(uuid())
+  clientId              String              @map("client_id")
+  platform              SocialPlatform
+  platformAccountId     String              @map("platform_account_id")
+  platformAccountName   String              @map("platform_account_name")
+  platformAccountUrl    String?             @map("platform_account_url")
+  accessTokenEncrypted  String              @map("access_token_encrypted")  // AES-256
+  refreshTokenEncrypted String?             @map("refresh_token_encrypted")
+  tokenExpiresAt        DateTime?           @map("token_expires_at")
+  followersCount        Int                 @default(0) @map("followers_count")
+  status                SocialAccountStatus @default(ACTIVE)
+  lastSyncedAt          DateTime?           @map("last_synced_at")
+  connectedAt           DateTime            @default(now()) @map("connected_at")
+  connectedByUserId     String              @map("connected_by_user_id")
+  createdAt             DateTime            @default(now()) @map("created_at")
+  updatedAt             DateTime            @updatedAt @map("updated_at")
+
+  postPlatforms SocialPostPlatform[]
+
+  @@unique([clientId, platform, platformAccountId])
+  @@index([clientId, status])
+  @@map("social_accounts")
+}
+
+model SocialPost {
+  id                  String           @id @default(uuid())
+  clientId            String           @map("client_id")
+  createdByUserId     String           @map("created_by_user_id")
+  contentText         String           @map("content_text")
+  contentMediaUrls    String[]         @map("content_media_urls")
+  targetPlatforms     SocialPlatform[] @map("target_platforms")
+  targetAccountIds    String[]         @map("target_account_ids")
+  status              SocialPostStatus @default(DRAFT)
+  scheduledAt         DateTime?        @map("scheduled_at")
+  publishedAt         DateTime?        @map("published_at")
+  approvalRequired    Boolean          @default(false) @map("approval_required")
+  approvedByUserId    String?          @map("approved_by_user_id")
+  approvedAt          DateTime?        @map("approved_at")
+  linkedCommuniqueId  String?          @map("linked_communique_id")
+  linkedAgendaItemId  String?          @map("linked_agenda_item_id")
+  engagementStats     Json             @default("{}") @map("engagement_stats")
+  errorLog            String?          @map("error_log")
+  createdAt           DateTime         @default(now()) @map("created_at")
+  updatedAt           DateTime         @updatedAt @map("updated_at")
+
+  platforms SocialPostPlatform[]
+
+  @@index([clientId, status, scheduledAt])
+  @@index([clientId, publishedAt])
+  @@map("social_posts_v2") // v2 to avoid conflict with existing social_posts
+}
+
+model SocialPostPlatform {
+  id              String         @id @default(uuid())
+  socialPostId    String         @map("social_post_id")
+  socialAccountId String         @map("social_account_id")
+  platform        SocialPlatform
+  externalPostId  String?        @map("external_post_id")
+  externalPostUrl String?        @map("external_post_url")
+  status          String         @default("pending") // pending | published | failed
+  errorMessage    String?        @map("error_message")
+  publishedAt     DateTime?      @map("published_at")
+  contentAdapted  String?        @map("content_adapted")
+
+  socialPost    SocialPost    @relation(fields: [socialPostId], references: [id], onDelete: Cascade)
+  socialAccount SocialAccount @relation(fields: [socialAccountId], references: [id])
+
+  @@map("social_post_platforms")
+}
+
+// ============================================================
+// MODULE M8 — AGENDA (Calendrier éditorial)
+// ============================================================
+
+enum AgendaEventType {
+  ANNOUNCEMENT
+  INAUGURATION
+  PRESS_CONFERENCE
+  REACTION
+  RECURRING
+  CRISIS
+  CAMPAIGN
+  OTHER
+}
+
+enum AgendaPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+model AgendaItem {
+  id                    String          @id @default(uuid())
+  clientId              String          @map("client_id")
+  title                 String
+  description           String?
+  eventDate             DateTime        @map("event_date")
+  eventEndDate          DateTime?       @map("event_end_date")
+  eventType             AgendaEventType @map("event_type")
+  status                String          @default("planned") // planned | in_progress | completed | cancelled
+  priority              AgendaPriority  @default(MEDIUM)
+  tags                  String[]
+  linkedCommuniqueIds   String[]        @map("linked_communique_ids")
+  linkedAgoraRoomIds    String[]        @map("linked_agora_room_ids")
+  linkedSocialPostIds   String[]        @map("linked_social_post_ids")
+  checklist             Json?           // [{task, done, due_date, assignee_id}]
+  assigneeUserId        String?         @map("assignee_user_id")
+  reminder1dBefore      Boolean         @default(true) @map("reminder_1d_before")
+  reminder1hBefore      Boolean         @default(true) @map("reminder_1h_before")
+  createdBy             String          @map("created_by")
+  createdAt             DateTime        @default(now()) @map("created_at")
+  updatedAt             DateTime        @updatedAt @map("updated_at")
+
+  @@index([clientId, eventDate])
+  @@index([clientId, status, eventDate])
+  @@map("agenda_items")
+}
+
+// ============================================================
+// MODULE M9 — STUDIO (Visuels brandés)
+// ============================================================
+
+enum StudioFormat {
+  SQUARE_1080         // 1080x1080
+  PORTRAIT_1080x1350  // 1080x1350
+  STORY_1080x1920     // 1080x1920
+  LANDSCAPE_1200x630  // 1200x630
+  LINKEDIN_1200x627   // 1200x627
+}
+
+enum StudioCategory {
+  ANNOUNCEMENT
+  EVENT
+  QUOTE
+  ACHIEVEMENT
+  CRISIS
+  GREETINGS
+  OTHER
+}
+
+model StudioTemplate {
+  id           String         @id @default(uuid())
+  name         String
+  category     StudioCategory
+  format       StudioFormat
+  previewUrl   String?        @map("preview_url")
+  templateJson Json           @map("template_json")
+  isActive     Boolean        @default(true) @map("is_active")
+  orderIndex   Int            @default(0) @map("order_index")
+  createdAt    DateTime       @default(now()) @map("created_at")
+
+  visuals StudioVisual[]
+
+  @@map("studio_templates")
+}
+
+model ClientBrandKit {
+  id                   String   @id @default(uuid())
+  clientId             String   @unique @map("client_id")
+  logoUrl              String?  @map("logo_url")
+  logoWhiteUrl         String?  @map("logo_white_url")
+  colorPrimary         String   @default("#0D1B3E") @map("color_primary")
+  colorSecondary       String   @default("#C8A45C") @map("color_secondary")
+  colorAccent          String   @default("#E8742E") @map("color_accent")
+  fontHeading          String   @default("Georgia") @map("font_heading")
+  fontBody             String   @default("Calibri") @map("font_body")
+  logoPositionDefault  String   @default("top_right") @map("logo_position_default")
+  signatureText        String?  @map("signature_text")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  @@map("client_brand_kits")
+}
+
+model StudioVisual {
+  id              String        @id @default(uuid())
+  clientId        String        @map("client_id")
+  templateId      String?       @map("template_id")
+  title           String
+  format          StudioFormat
+  renderParams    Json          @map("render_params")
+  outputUrl       String?       @map("output_url")
+  thumbnailUrl    String?       @map("thumbnail_url")
+  createdByUserId String        @map("created_by_user_id")
+  usedInPostIds   String[]      @map("used_in_post_ids")
+  createdAt       DateTime      @default(now()) @map("created_at")
+
+  template StudioTemplate? @relation(fields: [templateId], references: [id])
+
+  @@map("studio_visuals")
+}
+
+// ============================================================
+// MODULE M10 — INBOX (Boîte de réception unifiée)
+// ============================================================
+
+enum InboxChannelType {
+  GMAIL
+  OUTLOOK
+  WHATSAPP
+  WEB_FORM
+}
+
+enum InboxMessageCategory {
+  INTERVIEW_REQUEST
+  INFO_REQUEST
+  INVITATION
+  COMPLAINT
+  OTHER
+}
+
+enum InboxMessagePriority {
+  URGENT
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum InboxMessageStatus {
+  UNREAD
+  READ
+  IN_PROGRESS
+  REPLIED
+  ARCHIVED
+}
+
+model InboxChannel {
+  id                    String           @id @default(uuid())
+  clientId              String           @map("client_id")
+  channelType           InboxChannelType @map("channel_type")
+  channelIdentifier     String           @map("channel_identifier")
+  accessTokenEncrypted  String?          @map("access_token_encrypted")
+  refreshTokenEncrypted String?          @map("refresh_token_encrypted")
+  webhookSecret         String?          @map("webhook_secret")
+  status                String           @default("active") // active | expired | error | disconnected
+  lastSyncedAt          DateTime?        @map("last_synced_at")
+  createdAt             DateTime         @default(now()) @map("created_at")
+
+  messages InboxMessage[]
+
+  @@map("inbox_channels")
+}
+
+model InboxMessage {
+  id                String                @id @default(uuid())
+  clientId          String                @map("client_id")
+  channelId         String                @map("channel_id")
+  externalId        String?               @map("external_id")
+  threadId          String?               @map("thread_id")
+  fromName          String                @map("from_name")
+  fromAddress       String                @map("from_address")
+  fromJournalistId  String?               @map("from_journalist_id")
+  subject           String?
+  bodyText          String                @map("body_text")
+  bodyHtml          String?               @map("body_html")
+  attachments       Json?                 // [{filename, url, size, mime_type}]
+  receivedAt        DateTime              @map("received_at")
+  category          InboxMessageCategory?
+  priority          InboxMessagePriority  @default(MEDIUM)
+  status            InboxMessageStatus    @default(UNREAD)
+  assignedToUserId  String?               @map("assigned_to_user_id")
+  repliedAt         DateTime?             @map("replied_at")
+  internalNote      String?               @map("internal_note")
+  tags              String[]
+  createdAt         DateTime              @default(now()) @map("created_at")
+
+  channel InboxChannel @relation(fields: [channelId], references: [id])
+
+  @@index([clientId, status, receivedAt])
+  @@index([clientId, fromJournalistId])
+  @@index([clientId, priority])
+  @@map("inbox_messages")
+}
+
+// ============================================================
+// MODULE M11 — CRM (Relation journalistes enrichie)
+// ============================================================
+
+enum CrmInteractionType {
+  EMAIL_SENT
+  EMAIL_RECEIVED
+  WHATSAPP_SENT
+  WHATSAPP_RECEIVED
+  CALL
+  MEETING
+  COMMUNIQUE_SENT
+  INVITATION_SENT
+  PUBLICATION_DETECTED
+  FCM_PAID
+  OTHER
+}
+
+enum CrmRelationTier {
+  COLD      // 0-24
+  WARM      // 25-49
+  HOT       // 50-74
+  ENGAGED   // 75-100
+}
+
+model CrmInteraction {
+  id               String             @id @default(uuid())
+  clientId         String             @map("client_id")
+  journalistId     String             @map("journalist_id")
+  userId           String             @map("user_id")
+  interactionType  CrmInteractionType @map("interaction_type")
+  direction        String             // outbound | inbound | neutral
+  subject          String?
+  contentPreview   String?            @map("content_preview")
+  linkedEntityType String?            @map("linked_entity_type")
+  linkedEntityId   String?            @map("linked_entity_id")
+  occurredAt       DateTime           @map("occurred_at")
+  createdAt        DateTime           @default(now()) @map("created_at")
+
+  @@index([clientId, journalistId, occurredAt])
+  @@map("crm_interactions")
+}
+
+model CrmPrivateNote {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  journalistId String   @map("journalist_id")
+  content      String   // chiffré AES-256
+  visibility   String   @default("private") // private | team
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("crm_private_notes")
+}
+
+model CrmJournalistScore {
+  id                    String        @id @default(uuid())
+  clientId              String        @map("client_id")
+  journalistId          String        @map("journalist_id")
+  interactionsLast90d   Int           @default(0) @map("interactions_last_90d")
+  lastInteractionAt     DateTime?     @map("last_interaction_at")
+  publicationsGenerated Int           @default(0) @map("publications_generated")
+  fcmTotalPaidFcfa      Int           @default(0) @map("fcm_total_paid_fcfa")
+  relationScore         Int           @default(0) @map("relation_score") // 0-100
+  relationTier          CrmRelationTier @default(COLD) @map("relation_tier")
+  calculatedAt          DateTime      @default(now()) @map("calculated_at")
+
+  @@unique([clientId, journalistId])
+  @@map("crm_journalist_scores")
+}
+
+// ============================================================
+// MODULE M12 — BRIEF (Script d'interview Claude API)
+// ============================================================
+
+enum BriefMediaType {
+  PRESS_WRITTEN
+  RADIO
+  TV
+  WEB
+  PODCAST
+}
+
+enum BriefStatus {
+  DRAFT
+  GENERATING
+  READY
+  USED
+  ARCHIVED
+}
+
+model Brief {
+  id                String        @id @default(uuid())
+  clientId          String        @map("client_id")
+  createdBy         String        @map("created_by")
+  mediaName         String        @map("media_name")
+  journalistId      String?       @map("journalist_id")
+  journalistNameRaw String?       @map("journalist_name_raw")
+  mediaType         BriefMediaType @map("media_type")
+  interviewTopic    String        @map("interview_topic")
+  interviewContext  String?       @map("interview_context")
+  intervieweeName   String        @map("interviewee_name")
+  intervieweeRole   String        @map("interviewee_role")
+  durationMinutes   Int           @map("duration_minutes")
+  scheduledAt       DateTime?     @map("scheduled_at")
+  generatedContent  Json?         @map("generated_content") // Réponse Claude structurée
+  userEdits         String?       @map("user_edits")
+  status            BriefStatus   @default(DRAFT)
+  pdfUrl            String?       @map("pdf_url")
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+
+  @@map("briefs")
 }

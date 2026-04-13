@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <!-- HERALDO PRESS - Emblème seul (favicon, app icon) -->
+  <defs>
+    <linearGradient id="goldGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E5B85C"/>
+      <stop offset="100%" stop-color="#B8862E"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Fond carré arrondi navy -->
+  <rect x="0" y="0" width="400" height="400" rx="72" ry="72" fill="#0A2540"/>
+
+  <!-- Anneau or -->
+  <circle cx="200" cy="200" r="160" fill="none" stroke="url(#goldGrad2)" stroke-width="3"/>
+
+  <g transform="translate(200,200)">
+    <!-- Pilier gauche du H -->
+    <rect x="-78" y="-78" width="26" height="156" fill="#FFFFFF"/>
+    <!-- Crossbar -->
+    <rect x="-52" y="-13" width="70" height="26" fill="#FFFFFF"/>
+    <!-- Pilier droit en mégaphone -->
+    <path d="M 18 -78 L 18 78 L 78 104 L 78 -104 Z" fill="url(#goldGrad2)"/>
+
+    <!-- Ondes -->
+    <path d="M 92 -42 Q 110 0 92 42" fill="none" stroke="url(#goldGrad2)" stroke-width="6" stroke-linecap="round"/>
+    <path d="M 110 -58 Q 134 0 110 58" fill="none" stroke="url(#goldGrad2)" stroke-width="6" stroke-linecap="round" opacity="0.65"/>
+    <path d="M 128 -74 Q 158 0 128 74" fill="none" stroke="url(#goldGrad2)" stroke-width="6" stroke-linecap="round" opacity="0.35"/>
+  </g>
+</svg>

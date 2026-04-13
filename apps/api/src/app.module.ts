@@ -15,6 +15,12 @@ import { InstitutionsModule } from './institutions/institutions.module';
 import { JournalistsModule } from './journalists/journalists.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { AdminModule } from './admin/admin.module';
+import { SocialModule } from './social/social.module';
+import { AgendaModule } from './agenda/agenda.module';
+import { StudioModule } from './studio/studio.module';
+import { InboxModule } from './inbox/inbox.module';
+import { CrmModule } from './crm/crm.module';
+import { BriefsModule } from './briefs/briefs.module';
 
 @Module({
   imports: [
@@ -32,6 +38,12 @@ import { AdminModule } from './admin/admin.module';
     JournalistsModule,
     NotificationsModule,
     AdminModule,
+    SocialModule,
+    AgendaModule,
+    StudioModule,
+    InboxModule,
+    CrmModule,
+    BriefsModule,
   ],
   providers: [
     {

@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 220" width="720" height="220">
+  <!-- HERALDO PRESS - Logo principal horizontal -->
+  <defs>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E5B85C"/>
+      <stop offset="100%" stop-color="#B8862E"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Emblème circulaire à gauche -->
+  <g transform="translate(110,110)">
+    <!-- Cercle extérieur navy -->
+    <circle cx="0" cy="0" r="88" fill="#0A2540"/>
+    <!-- Anneau or fin -->
+    <circle cx="0" cy="0" r="80" fill="none" stroke="url(#goldGrad)" stroke-width="2"/>
+
+    <!-- Lettre H stylisée — pilier gauche droit, pilier droit en cor/mégaphone -->
+    <!-- Pilier gauche -->
+    <rect x="-42" y="-42" width="14" height="84" fill="#FFFFFF"/>
+    <!-- Crossbar -->
+    <rect x="-28" y="-7" width="38" height="14" fill="#FFFFFF"/>
+    <!-- Pilier droit évasé en mégaphone -->
+    <path d="M 10 -42 L 10 42 L 42 56 L 42 -56 Z" fill="url(#goldGrad)"/>
+
+    <!-- Ondes de diffusion à droite du mégaphone -->
+    <path d="M 50 -22 Q 60 0 50 22" fill="none" stroke="url(#goldGrad)" stroke-width="3" stroke-linecap="round"/>
+    <path d="M 60 -32 Q 74 0 60 32" fill="none" stroke="url(#goldGrad)" stroke-width="3" stroke-linecap="round" opacity="0.7"/>
+    <path d="M 70 -42 Q 88 0 70 42" fill="none" stroke="url(#goldGrad)" stroke-width="3" stroke-linecap="round" opacity="0.4"/>
+  </g>
+
+  <!-- Wordmark -->
+  <g transform="translate(230,0)">
+    <!-- HERALDO -->
+    <text x="0" y="118" font-family="Georgia, 'Times New Roman', serif" font-size="68" font-weight="700" fill="#0A2540" letter-spacing="6">HERALDO</text>
+    <!-- Filet or de séparation -->
+    <line x1="0" y1="138" x2="380" y2="138" stroke="url(#goldGrad)" stroke-width="2"/>
+    <!-- PRESS -->
+    <text x="0" y="172" font-family="'Helvetica Neue', Arial, sans-serif" font-size="22" font-weight="500" fill="#5A6470" letter-spacing="14">PRESS</text>
+    <!-- Baseline -->
+    <text x="378" y="172" font-family="'Helvetica Neue', Arial, sans-serif" font-size="11" font-weight="400" fill="#8A92A0" letter-spacing="2" text-anchor="end" font-style="italic">Votre message, notre mission.</text>
+  </g>
+</svg>
