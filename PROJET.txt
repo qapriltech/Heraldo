@@ -1,0 +1,590 @@
+
+
+
+H É R A L D O
+
+
+Plateforme numérique de diffusion et d'activation médiatique
+"Votre message, notre mission."
+DOSSIER DE PROJET — VERSION 1.0
+
+Avril 2026  |  Abidjan, Côte d'Ivoire
+Marché initial : Côte d'Ivoire  |  Extension : Zone UEMOA
+
+
+
+Document confidentiel — Usage restreint
+
+SOMMAIRE
+
+I.     Résumé exécutif
+II.    Le projet HÉRALDO — Genèse et vision
+III.   Analyse du marché
+IV.    Les acteurs de la plateforme
+V.     Architecture produit — 6 modules
+VI.    Mécanisme FCM — Digitalisation du per diem
+VII.   Amplification 360° — Intégration réseaux sociaux
+VIII.  Partenariat stratégique — Association des Directeurs de Publications
+IX.    Modèle économique et tarification
+X.     Business plan financier — Projections 3 ans
+XI.    Feuille de route — Plan d'exécution
+XII.   Analyse des risques
+XIII.  Conclusion et prochaines étapes
+
+I. RÉSUMÉ EXÉCUTIF
+
+HÉRALDO est une plateforme numérique de diffusion et d'activation médiatique destinée aux institutions, élus et entreprises d'Afrique de l'Ouest. Elle permet à ses utilisateurs de diffuser des communiqués de presse, d'organiser des points de presse virtuels professionnels et de mesurer l'impact réel de leur communication médiatique.
+
+Le projet répond à un double constat : les institutions et élus ivoiriens manquent d'outils numériques structurés pour gérer leur communication médiatique ; les journalistes manquent d'une plateforme transparente et rémunératrice pour valoriser leur travail de couverture.
+
+Marché CI
+Lancement
+Objectif An 1
+Objectif An 3
+221 M FCFA/an — Marché adressable total
+Q3 2026 — Abidjan en premier
+22 M FCFA — 10% pénétration CI
+80 M FCFA — CI + UEMOA
+
+HÉRALDO se positionne comme l'infrastructure officielle de communication médiatique en Afrique de l'Ouest, avec un partenariat fondateur avec l'Association des Directeurs de Publications des Journaux de Côte d'Ivoire.
+
+II. LE PROJET HÉRALDO — GENÈSE ET VISION
+
+2.1  Origine du nom
+HÉRALDO tire son nom du héraut, messager officiel des institutions royales et publiques au Moyen-Âge. Le héraut annonçait, diffusait et donnait la parole de manière officielle et solennelle. Le suffixe -o modernise le terme et lui donne une dimension internationale, fonctionnant en français, anglais et dans les langues de l'UEMOA.
+
+2.2  La vision
+HÉRALDO ambitionne de devenir l'infrastructure de référence de la communication médiatique institutionnelle en Afrique de l'Ouest. Là où les plateformes RP classiques se limitent à un carnet d'adresses journalistes, HÉRALDO propose un écosystème complet : diffusion, événementiel virtuel, fonds de couverture, amplification digitale et mesure d'impact.
+
+2.3  Le problème résolu
+La relation presse en Côte d'Ivoire fonctionne encore largement sur le carnet d'adresses personnel, les relations informelles et les per diems versés en cash avant les événements. Ce modèle présente trois défauts majeurs :
+	•	Opacité financière : aucun suivi, aucune traçabilité des sommes versées aux journalistes.
+	•	Résultats aléatoires : un per diem versé ne garantit pas la publication d'un article.
+	•	Pas de mesure : l'institution ne sait jamais combien de personnes ont été touchées par sa communication.
+
+2.4  Le positionnement stratégique
+HÉRALDO se positionne comme une infrastructure de diffusion et d'activation médiatique — un outil d'usage quotidien pour les institutions qui ont besoin de communiquer régulièrement. Ce positionnement justifie les abonnements annuels et une intégration profonde dans les workflows de communication institutionnelle.
+
+III. ANALYSE DU MARCHÉ
+
+3.1  Marché prioritaire — Côte d'Ivoire
+
+Segment
+Nombre
+Formule
+Prix annuel
+ARR potentiel
+Communes (maires)
+201
+HÉRALDO MAIRIE
+480 000 FCFA
+96,5 M FCFA
+Députés / Conseillers
+255
+HÉRALDO ÉLU
+240 000 FCFA
+61,2 M FCFA
+Conseils régionaux
+31
+HÉRALDO INSTITUTION
+900 000 FCFA
+27,9 M FCFA
+Ministères / Directions
+40+
+HÉRALDO INSTITUTION
+900 000 FCFA
+36 M FCFA
+Agences RP
+50+
+HÉRALDO AGENCE
+720 000 FCFA
+36 M FCFA
+TOTAL MARCHÉ ADRESSABLE CI
+577+
+—
+—
+221 M FCFA/an
+
+En prenant une pénétration conservatrice de 10% à 18 mois, l'ARR cible en Côte d'Ivoire est de 22 millions de FCFA, auquel s'ajoutent les revenus non récurrents (salles virtuelles, FCM, studio éditorial) estimés à 8-12 millions de FCFA supplémentaires.
+
+3.2  Extension UEMOA — Phase 2
+
+Pays
+Communes
+Pénétration 5%
+ARR estimé
+Priorité
+Côte d'Ivoire
+201
+20 mairies
+9,6 M FCFA
+P0 — Lancement
+Sénégal
+552
+28 mairies
+13,4 M FCFA
+P1 — M18
+Burkina Faso
+351
+18 mairies
+8,6 M FCFA
+P2 — M24
+Mali
+703
+35 mairies
+16,8 M FCFA
+P2 — M24
+Bénin
+77
+8 mairies
+3,8 M FCFA
+P3 — M30
+
+3.3  Analyse concurrentielle
+Le marché ivoirien de la communication institutionnelle ne compte aujourd'hui aucune plateforme numérique structurée dédiée à la relation presse.
+	•	Agences RP traditionnelles : opèrent sur carnet d'adresses, sans outil numérique propre, sans traçabilité ni mesure d'impact.
+	•	Plateformes mondiales (Cision, Meltwater) : inadaptées au marché africain, trop coûteuses, sans base de données journalistes CI.
+	•	Solutions bricolées (WhatsApp, email groupé) : utilisées par défaut, sans professionnalisme ni reporting.
+
+IV. LES ACTEURS DE LA PLATEFORME
+
+Code
+Acteur
+Profils
+Rôle
+Interface
+ACT-01
+Institution / Élu
+Mairies · Députés · Ministères · ONG · Entreprises
+Émetteur du message · Payeur
+Web + Mobile
+ACT-02
+Journaliste / Média
+Presse écrite · Web · Radio · TV
+Récepteur + diffuseur de contenu
+Web + Mobile
+ACT-03
+Influenceur / Relais
+Micro-influenceurs CI · Relais digitaux
+Amplificateur digital
+Web + Mobile
+ACT-04
+Agence RP
+Agences communication · Cabinets conseil
+Gestionnaire multi-clients
+Web
+ACT-05
+Admin HÉRALDO
+Équipe plateforme
+Modération · Validation · Contrôle qualité
+Back-office
+
+V. ARCHITECTURE PRODUIT — 6 MODULES
+
+Module 1 — ÉMISSION : Diffusion de communiqués
+Le module ÉMISSION est le point d'entrée principal de la plateforme. Il permet à tout client institutionnel de créer, mettre en forme et diffuser ses communiqués de presse en quelques minutes.
+	•	Création de communiqué en 3 formats simultanés : version presse écrite, version web (optimisée SEO) et version réseaux sociaux.
+	•	Ciblage intelligent des médias selon secteur, zone géographique et audience.
+	•	Studio éditorial intégré : assistance à la rédaction pour les élus.
+	•	Archivage automatique de tous les communiqués avec horodatage et justificatifs de diffusion.
+	•	Tableau de bord de suivi des diffusions en temps réel.
+
+Module 2 — AGORA : Salle de presse virtuelle premium
+La salle AGORA est le produit phare de HÉRALDO. Elle remplace le point de presse physique (coût 500 000 à 2 000 000 FCFA) par une salle virtuelle professionnelle à 75 000 FCFA.
+
+Avant le point de presse :
+	•	Création de la salle avec identité visuelle du client (logo, couleurs, nom).
+	•	Envoi d'invitations aux journalistes avec accréditation numérique.
+	•	Mise en ligne du dossier de presse interactif. Rappels automatiques J-7, J-1 et H-2.
+
+Pendant le point de presse :
+	•	Salle vidéo brandée. Partage d'écran, diffusion de vidéos, présentation de documents.
+	•	Séance Q&A modérée avec attribution nominative des questions par média.
+
+Après le point de presse :
+	•	Replay disponible sous 2 heures. Kit média complet envoyé automatiquement aux participants.
+	•	Rapport de présence détaillé. Rapport de diffusion complet. Facture automatique.
+
+Salle Standard
+Salle Premium
+Salle Nationale
+75 000 FCFA
+150 000 FCFA
+350 000 FCFA
+50 participants max
+200 participants max
+500+ participants
+
+Module 3 — RÉSEAU : Base de données médias accrédités
+Le RÉSEAU est l'actif stratégique central de HÉRALDO. C'est la base de données de tous les journalistes, médias et influenceurs accrédités sur la plateforme avec profil complet, accréditation vérifiée et segmentation intelligente.
+
+Module 4 — FCM : Fonds de Couverture Média
+Le FCM est l'innovation centrale de HÉRALDO. Il transforme le per diem cash en un mécanisme digital transparent, conditionné à la preuve de couverture. L'institution paie uniquement pour des résultats réels et mesurables.
+
+Module 5 — AMPLIFICATION : Diffusion 360°
+Le module AMPLIFICATION permet à l'institution d'élargir la portée de sa communication au-delà des médias traditionnels, en activant les réseaux sociaux, les groupes WhatsApp et les influenceurs CI en simultané.
+
+Module 6 — IMPACT : Mesure et reporting
+Le module IMPACT transforme chaque action de communication en données mesurables. C'est le rapport d'efficacité que l'institution reçoit après chaque communiqué ou événement HÉRALDO.
+
+VI. MÉCANISME FCM — DIGITALISATION DU PER DIEM
+
+6.1  Principe du FCM
+Le Fonds de Couverture Média (FCM) est la fonctionnalité la plus innovante de HÉRALDO. Il résout le problème central de la relation presse ivoirienne : les per diems versés en cash avant les événements, sans garantie de publication ni traçabilité.
+Avec le FCM, l'institution ne verse plus un per diem cash. Elle alimente un fonds digital, et les journalistes sont rémunérés automatiquement à la preuve de couverture (article publié, reportage diffusé, post réseaux sociaux).
+
+6.2  Les 5 étapes du mécanisme FCM
+
+Étape
+Action
+Ce qui se passe
+1 — Alimentation
+Institution crédite son FCM en Mobile Money (Wave, Orange Money) ou virement.
+Montant visible en temps réel. Traçabilité totale dès le départ.
+2 — Configuration
+L'institution fixe les conditions : montant par article, par reportage TV/radio, délai de publication accepté.
+Transparence totale sur les conditions avant que les journalistes acceptent.
+3 — Invitation
+Les journalistes invités voient les conditions FCM avant d'accepter l'invitation.
+Accord préalable documenté sur la plateforme.
+4 — Preuve de couverture
+Le journaliste soumet sa preuve (lien article, capture, lien vidéo). Modérateur HÉRALDO valide sous 4 heures.
+Certification de la couverture avant tout paiement.
+5 — Paiement auto
+Dès validation, montant FCM envoyé automatiquement au journaliste sur son Mobile Money.
+Reçu PDF généré pour les deux parties. Commission HÉRALDO 15% prélevée.
+
+6.3  Avantages par acteur
+
+Acteur
+Avantage principal
+Institution
+Fini les per diems sans retour. Elle paie pour des résultats réels et mesurables.
+Journaliste
+Rémunération transparente, rapide et traçable. Plus de négociation informelle.
+HÉRALDO
+Commission de 15% sur chaque transaction FCM — revenu variable et scalable.
+Association
+Commission reversée sur chaque FCM touchant ses membres — revenu passif croissant.
+
+VII. AMPLIFICATION 360° — INTÉGRATION RÉSEAUX SOCIAUX
+
+7.1  Les 4 outils d'amplification
+
+Outil
+Description
+Impact
+Publication Facebook/Instagram automatique
+Chaque communiqué est reformaté et publié automatiquement sur les pages officielles du client.
+Reach organique immédiat
+Diffusion WhatsApp Business
+Le communiqué est envoyé aux groupes WhatsApp des médias partenaires HÉRALDO via l'API Business.
+Pénétration directe réseau journalistes
+Pack Influenceurs CI
+Réseau de micro-influenceurs ivoiriens avec audience vérifiée qui relaient le message du client.
+Audience sociale ciblée
+Score de portée estimée
+Indicateur de portée calculé : tirage presse + audience web + reach réseaux sociaux + membres WhatsApp.
+KPI de campagne mesurable
+
+7.2  Formule de calcul de la portée
+
+Portée = (Nb journaux × Tirage moyen) + (Nb articles web × Audience estimée) + (Reach Facebook) + (Reach Instagram) + (Membres WhatsApp touchés)
+
+VIII. PARTENARIAT STRATÉGIQUE — ASSOCIATION DES DIRECTEURS DE PUBLICATIONS
+
+8.1  Pourquoi ce partenariat est fondateur
+L'Association des Directeurs de Publications des Journaux de Côte d'Ivoire est le partenaire fondateur naturel de HÉRALDO. Ce partenariat résout le principal obstacle au lancement de toute plateforme de relation presse : constituer un réseau de médias crédibles et engagés dès le premier jour.
+Sans ce partenariat, HÉRALDO serait une place de marché sans vendeurs. Avec ce partenariat, HÉRALDO dispose immédiatement d'un réseau de médias accrédités, d'une légitimité éditoriale et d'une caution institutionnelle auprès des élus et des régulateurs.
+
+8.2  Structure du partenariat proposé
+
+Ce que HÉRALDO offre à l'Association
+Ce que l'Association apporte à HÉRALDO
+Commission reversée sur chaque FCM versé à leurs membres
+Réseau de médias embarqués dès le lancement (J1)
+Badge "Partenaire officiel" visible sur la plateforme
+Crédibilité éditoriale auprès des institutions clientes
+Accès gratuit à la salle AGORA pour leurs assemblées générales
+Caution réglementaire face à la CNPCI et la HACA
+Tableau de bord des revenus FCM de leurs membres
+Exclusivité réseau médias CI sur 12 mois
+Formation gratuite des membres à la plateforme
+Participation à la gouvernance éditoriale de la plateforme
+
+8.3  Modèle de gouvernance éditoriale
+	•	Distinction obligatoire entre communiqué institutionnel, contenu sponsorisé et reportage indépendant.
+	•	Mention obligatoire "Couverture soutenue via HÉRALDO" sur tout contenu produit avec financement FCM.
+	•	Les règles de modération du contenu déposé sur la plateforme.
+	•	Le comité éditorial paritaire (HÉRALDO + Association) pour les cas litigieux.
+
+IX. MODÈLE ÉCONOMIQUE ET TARIFICATION
+
+9.1  Axe 1 — Revenus récurrents (abonnements annuels)
+
+Formule
+Cible
+Prix annuel
+Inclus dans l'abonnement
+HÉRALDO ÉLU
+Député · Conseiller
+240 000 FCFA
+4 communiqués/mois · 1 salle standard/trim · reporting
+HÉRALDO MAIRIE
+Communes CI
+480 000 FCFA
+8 communiqués/mois · 1 salle AGORA/mois · studio · reporting
+HÉRALDO INSTITUTION
+Ministères · Directions
+900 000 FCFA
+Illimité · 2 salles/mois · studio · API · reporting avancé
+HÉRALDO AGENCE
+Agences RP
+720 000 FCFA
+5 comptes clients · salles · studio · white label
+
+9.2  Axe 2 — Revenus à l'acte
+
+Service
+Tarif
+Description
+Location Salle AGORA Standard
+75 000 FCFA
+50 participants · replay 30 jours
+Location Salle AGORA Premium
+150 000 FCFA
+200 participants · kit média inclus
+Location Salle AGORA Nationale
+350 000 FCFA
+500+ participants · streaming pro
+Pack Amplification 360°
+35 000 FCFA
+Social + WhatsApp + influenceurs
+Rédaction communiqué (studio)
+15 000 FCFA
+Par communiqué rédigé
+Dossier de presse complet
+75 000 FCFA
+Rédaction + mise en forme + diffusion
+Pack Influenceurs CI
+50 000 – 200 000 FCFA
+Selon portée et nombre d'influenceurs
+
+9.3  Axe 3 — Commissions sur transactions FCM
+HÉRALDO prélève une commission de 15% sur chaque transaction FCM. Ce revenu est entièrement variable et croît avec le nombre d'événements organisés sur la plateforme.
+
+X. BUSINESS PLAN FINANCIER — PROJECTIONS 3 ANS
+
+10.1  Hypothèses de croissance
+	•	An 1 : 10% de pénétration du marché CI (abonnements) + 2 salles virtuelles/semaine + FCM modéré.
+	•	An 2 : 25% CI + lancement Sénégal + croissance FCM et services à l'acte.
+	•	An 3 : 40% CI + Sénégal + Burkina Faso + Mali + revenus agences en forte hausse.
+
+10.2  Projections de chiffre d'affaires
+
+Source de revenus
+An 1
+An 2
+An 3
+Abonnements MAIRIE (CI)
+5 760 000 FCFA
+14 400 000 FCFA
+23 040 000 FCFA
+Abonnements ÉLU (CI)
+3 840 000 FCFA
+9 600 000 FCFA
+15 360 000 FCFA
+Abonnements INSTITUTION
+4 500 000 FCFA
+9 000 000 FCFA
+18 000 000 FCFA
+Abonnements AGENCE
+3 600 000 FCFA
+7 200 000 FCFA
+14 400 000 FCFA
+Abonnements UEMOA
+0 FCFA
+7 200 000 FCFA
+18 000 000 FCFA
+Salles AGORA (acte)
+4 500 000 FCFA
+9 000 000 FCFA
+18 000 000 FCFA
+Commissions FCM
+2 250 000 FCFA
+5 400 000 FCFA
+10 800 000 FCFA
+Studio éditorial
+1 800 000 FCFA
+3 600 000 FCFA
+6 000 000 FCFA
+Pack Amplification 360°
+1 050 000 FCFA
+2 100 000 FCFA
+4 200 000 FCFA
+CHIFFRE D'AFFAIRES TOTAL
+27 300 000 FCFA
+67 500 000 FCFA
+127 800 000 FCFA
+
+10.3  Estimation des charges et résultat net
+
+Poste de charge
+An 1
+An 2
+An 3
+Développement plateforme
+8 000 000 FCFA
+4 000 000 FCFA
+4 000 000 FCFA
+Infrastructure technique
+1 500 000 FCFA
+2 500 000 FCFA
+4 000 000 FCFA
+Équipe (2 pers. an 1 → 5 an 3)
+6 000 000 FCFA
+12 000 000 FCFA
+18 000 000 FCFA
+Commercial et partenariats
+2 000 000 FCFA
+3 000 000 FCFA
+5 000 000 FCFA
+Marketing et communication
+1 500 000 FCFA
+2 500 000 FCFA
+4 000 000 FCFA
+Juridique et conformité
+1 200 000 FCFA
+800 000 FCFA
+800 000 FCFA
+Formation partenaires médias
+500 000 FCFA
+500 000 FCFA
+500 000 FCFA
+Divers et imprévus (10%)
+2 070 000 FCFA
+2 530 000 FCFA
+3 630 000 FCFA
+TOTAL CHARGES
+22 770 000 FCFA
+27 830 000 FCFA
+39 930 000 FCFA
+RÉSULTAT NET
++4 530 000 FCFA
++39 670 000 FCFA
++87 870 000 FCFA
+
+Note : Les projections financières sont établies sur la base d'hypothèses conservatrices. Un partenariat actif avec l'Association des Directeurs de Publications et une traction commerciale supérieure aux prévisions pourraient significativement améliorer ces résultats dès l'année 1.
+
+10.4  Besoins d'investissement initial (15 à 20 M FCFA)
+	•	Développement de la plateforme MVP (modules ÉMISSION, AGORA, RÉSEAU) : 8 000 000 FCFA.
+	•	Infrastructure technique et sécurité : 1 500 000 FCFA.
+	•	Frais de constitution de la structure juridique : 800 000 FCFA.
+	•	Fonds de roulement initial (6 mois de charges fixes) : 4 500 000 FCFA.
+	•	Réserve stratégique et imprévus : 2 200 000 FCFA.
+
+XI. FEUILLE DE ROUTE — PLAN D'EXÉCUTION
+
+Phase
+Période
+Objectif
+Actions clés
+Phase 0
+M0 – M2
+Fondation
+Constitution juridique · Signature partenariat Association Publications · Recrutement CTO · Définition CDC technique complète.
+Phase 1
+M2 – M5
+Développement MVP
+Développement modules ÉMISSION + AGORA + RÉSEAU · Intégration Mobile Money (Wave + Orange) · Tests internes · Onboarding 5 médias pilotes.
+Phase 2
+M5 – M8
+Lancement Abidjan
+20 premiers clients via réseau personnel · 3 événements de démonstration publique · Activation FCM · Objectif : 5 abonnements MAIRIE signés.
+Phase 3
+M8 – M12
+Croissance CI
+Pitch UVICOCI · Démarchage Assemblée Nationale · Lancement modules AMPLIFICATION et IMPACT · Objectif : 22 M FCFA ARR.
+Phase 4
+M12 – M18
+UEMOA — Sénégal
+Partenariat local Sénégal · Adaptation réglementaire · Lancement commercial Dakar · Objectif : 15 M FCFA ARR Sénégal.
+Phase 5
+M18 – M24
+UEMOA — Burkina + Mali
+Déploiement Burkina Faso et Mali · HÉRALDO AFRICA comme marque régionale · Objectif : 80 M FCFA ARR total UEMOA.
+
+11.1  Jalons critiques
+	•	J+60 : Constitution de la structure juridique et signature du partenariat avec l'Association des Directeurs de Publications.
+	•	J+150 : Livraison du MVP (modules ÉMISSION, AGORA, RÉSEAU) et premier point de presse virtuel de démonstration.
+	•	J+240 : Premier client institutionnel payant (abonnement MAIRIE signé).
+	•	J+365 : 22 M FCFA ARR et 30 médias accrédités sur la plateforme.
+	•	J+540 : Lancement Sénégal opérationnel avec premier client local.
+	•	J+730 : HÉRALDO AFRICA présente dans 4 pays UEMOA, 80 M FCFA ARR.
+
+XII. ANALYSE DES RISQUES
+
+Risque
+Probabilité
+Impact
+Parade
+Réseau médias insuffisant au démarrage
+Faible
+Fort
+Partenariat fondateur avec l'Association garantit un réseau opérationnel dès le lancement.
+Confusion publireportage / information
+Moyen
+Fort
+Charte éditoriale dès J1. Mention obligatoire FCM. Comité éditorial paritaire HÉRALDO + Association.
+Résistance des élus au changement
+Moyen
+Moyen
+Démo gratuite 30 jours. Premier événement pris en charge. ROI immédiatement visible et mesurable.
+Problèmes réglementaires CNPCI/HACA
+Faible
+Fort
+Consultation juridique préalable. Partenariat avec les régulateurs avant lancement.
+Difficulté de pénétration UEMOA
+Moyen
+Moyen
+CI d'abord. Partenariats locaux avant l'entrée dans chaque marché. Adaptation réglementaire locale.
+Copie par un acteur mieux financé
+Faible
+Moyen
+Le partenariat avec l'Association est incopiable. La base de données médias accrédités est une barrière à l'entrée forte.
+
+XIII. CONCLUSION ET PROCHAINES ÉTAPES
+
+HÉRALDO représente une opportunité unique de structurer et digitaliser un marché qui fonctionne aujourd'hui exclusivement sur des pratiques informelles. En combinant une marketplace médias, une salle de presse virtuelle professionnelle, un mécanisme innovant de fonds de couverture et une amplification digitale intégrée, HÉRALDO répond à des besoins réels et urgents d'acteurs institutionnels qui disposent des budgets nécessaires et manquent d'outils adaptés.
+
+Le positionnement sur le marché des collectivités et élus en Côte d'Ivoire en premier, avant une extension UEMOA, permet une approche progressive et maîtrisée du risque, avec un partenariat fondateur qui réduit considérablement les obstacles habituels au lancement d'une marketplace.
+
+Le projet est rentable dès l'année 1 sur une base conservatrice, et projette un chiffre d'affaires de 127 millions de FCFA en année 3, avec une expansion dans 4 pays de l'UEMOA.
+
+Prochaines étapes immédiates
+
+#
+Délai
+Action
+1
+Semaine 1
+Prise de contact avec l'Association des Directeurs de Publications — présentation du concept et proposition de partenariat.
+2
+Semaine 2
+Identification et sélection du développeur/CTO pour la construction de la plateforme.
+3
+Semaine 3
+Consultation juridique pour le cadre réglementaire (CNPCI, HACA) et la structure légale de HÉRALDO.
+4
+Mois 1
+Constitution de la structure juridique et ouverture du compte bancaire professionnel.
+5
+Mois 1–2
+Rédaction du CDC technique complet et démarrage du développement du MVP.
+6
+Mois 2
+Identification des 5 premières mairies ou institutions cibles pour la phase pilote.
+
+
+— HÉRALDO — "Votre message, notre mission." —    Document confidentiel — Tous droits réservés — Avril 2026
+

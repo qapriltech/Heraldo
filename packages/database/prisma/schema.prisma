@@ -1,0 +1,841 @@
+// ============================================================
+// HÉRALDO — Schéma Prisma complet
+// CDC-HERALDO-001 / CST-HERALDO-001 — Avril 2026
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum UserRole {
+  INSTITUTION
+  JOURNALIST
+  INFLUENCER
+  AGENCY
+  ADMIN
+}
+
+enum UserStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum AccreditationStatus {
+  PENDING
+  VALIDATED
+  SUSPENDED
+  REVOKED
+}
+
+enum SubscriptionPlan {
+  HERALDO_ELU        // 240 000 FCFA/an — Député, Conseiller
+  HERALDO_MAIRIE     // 480 000 FCFA/an — Communes
+  HERALDO_INSTITUTION // 900 000 FCFA/an — Ministères, Directions
+  HERALDO_AGENCE     // 720 000 FCFA/an — Agences RP (5 clients)
+}
+
+enum AgoraRoomType {
+  STANDARD   // 75 000 FCFA — 50 participants — 3h — replay 30j
+  PREMIUM    // 150 000 FCFA — 200 participants — 6h — replay 60j
+  NATIONALE  // 350 000 FCFA — 500+ participants — illimitée — replay 90j
+}
+
+enum AgoraRoomStatus {
+  PENDING
+  SCHEDULED
+  LIVE
+  ENDED
+  CANCELLED
+}
+
+enum RecordingStatus {
+  PENDING
+  RECORDING
+  PROCESSING
+  READY
+  FAILED
+}
+
+enum ParticipantRole {
+  HOST
+  SPEAKER
+  JOURNALIST_ACTIVE   // Audio + vidéo (app requise)
+  OBSERVER            // Chat only (PWA/navigateur)
+}
+
+enum ConnectionMode {
+  DESKTOP_APP        // Electron — accès complet
+  MOBILE_APP         // React Native — accès complet
+  MOBILE_PWA         // Navigateur mobile — observation + chat
+  DESKTOP_BROWSER    // Navigateur desktop — BLOQUÉ (RG-ACT-01)
+}
+
+enum CommuniqueFormat {
+  PRESSE_ECRITE   // Format structuré officiel
+  WEB_SEO         // Format optimisé SEO
+  RESEAUX_SOCIAUX // Format court 280 chars + visuel
+}
+
+enum CommuniqueStatus {
+  DRAFT
+  PENDING_REVIEW
+  READY
+  SENT
+  ARCHIVED
+}
+
+enum FcmPoolStatus {
+  PENDING      // Fonds créé, en attente d'alimentation
+  FUNDED       // Fonds alimenté, prêt
+  ACTIVE       // Invitations envoyées, en cours
+  CLOSED       // Événement terminé, solde résiduel recrédité
+  CANCELLED
+}
+
+enum FcmInvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+
+enum ProofType {
+  URL           // Lien article publié
+  SCREENSHOT    // Capture écran horodatée
+  PDF           // Journal papier scanné
+}
+
+enum CoverageType {
+  ARTICLE        // Presse écrite / web
+  TV_REPORT      // Reportage TV
+  RADIO          // Reportage radio
+  SOCIAL_POST    // Post réseaux sociaux
+}
+
+enum ProofStatus {
+  PENDING
+  VALIDATED
+  REJECTED
+}
+
+enum PaymentStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+  REFUNDED
+}
+
+enum PaymentOperator {
+  WAVE
+  ORANGE_MONEY
+  MTN_MOMO
+  MOOV_MONEY
+  CINETPAY      // Agrégateur fallback
+  VIREMENT      // Virement bancaire
+}
+
+enum DevicePlatform {
+  ANDROID
+  IOS
+  WINDOWS
+  MAC
+  WEB_PWA
+}
+
+enum AmplificationType {
+  FACEBOOK
+  INSTAGRAM
+  WHATSAPP_BUSINESS
+  INFLUENCER_PACK
+}
+
+// ============================================================
+// AUTHENTIFICATION & UTILISATEURS
+// ============================================================
+
+model User {
+  id              String     @id @default(uuid())
+  email           String     @unique
+  passwordHash    String     @map("password_hash")
+  role            UserRole
+  status          UserStatus @default(PENDING)
+  fullName        String     @map("full_name")
+  phoneEncrypted  String?    @map("phone_encrypted") // AES-256-GCM
+  avatarUrl       String?    @map("avatar_url")
+  language        String     @default("fr")
+  emailVerified   Boolean    @default(false) @map("email_verified")
+  mfaEnabled      Boolean    @default(false) @map("mfa_enabled")
+  lastLoginAt     DateTime?  @map("last_login_at")
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+
+  // Relations
+  sessions          Session[]
+  refreshTokens     RefreshToken[]
+  institutionUsers  InstitutionUser[]
+  journalist        Journalist?
+  influencer        Influencer?
+
+  // Audit
+  auditLogs         AuditLog[]
+  reviewedProofs    FcmProof[]       @relation("ProofReviewer")
+  sentNotifications Notification[]   @relation("NotificationSender")
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  revoked   Boolean  @default(false)
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}
+
+// ============================================================
+// INSTITUTIONS & ABONNEMENTS
+// ============================================================
+
+model Institution {
+  id            String           @id @default(uuid())
+  name          String
+  type          String           // MAIRIE | MINISTERE | DEPUTE | CONSEIL_REGIONAL | ONG | ENTREPRISE
+  logoUrl       String?          @map("logo_url")
+  brandColor    String?          @map("brand_color") // #HEX
+  address       String?
+  city          String?
+  phone         String?
+  website       String?
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  users         InstitutionUser[]
+  subscriptions Subscription[]
+  communiques   Communique[]
+  agoraRooms    AgoraRoom[]
+  fcmPools      FcmPool[]
+  amplifications AmplificationCampaign[]
+  impactReports ImpactReport[]
+  payments      Payment[]
+
+  @@map("institutions")
+}
+
+model InstitutionUser {
+  id              String   @id @default(uuid())
+  institutionId   String   @map("institution_id")
+  userId          String   @map("user_id")
+  role            String   @default("MEMBER") // OWNER | ADMIN | MEMBER
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  institution Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([institutionId, userId])
+  @@map("institution_users")
+}
+
+model Subscription {
+  id              String           @id @default(uuid())
+  institutionId   String           @map("institution_id")
+  plan            SubscriptionPlan
+  startDate       DateTime         @map("start_date")
+  endDate         DateTime         @map("end_date")
+  active          Boolean          @default(true)
+  autoRenew       Boolean          @default(true) @map("auto_renew")
+  // Quotas selon plan
+  communiquesPerMonth  Int         @default(4)  @map("communiques_per_month")
+  agoraRoomsPerMonth   Int         @default(1)  @map("agora_rooms_per_month")
+  maxAgencyClients     Int         @default(0)  @map("max_agency_clients") // 5 pour AGENCE (RG-ACT-03)
+  paymentId       String?          @map("payment_id")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+
+  institution Institution @relation(fields: [institutionId], references: [id])
+  payment     Payment?    @relation(fields: [paymentId], references: [id])
+
+  @@map("subscriptions")
+}
+
+// ============================================================
+// JOURNALISTES & RÉSEAU MÉDIAS (Module 3 — RÉSEAU)
+// ============================================================
+
+model Journalist {
+  id                  String              @id @default(uuid())
+  userId              String              @unique @map("user_id")
+  mediaOrganizationId String?             @map("media_organization_id")
+  position            String?             // Poste au sein du média
+  specialties         String[]            // ["politique", "economie", "sport", ...]
+  coverageZone        String[]            @map("coverage_zone") // ["abidjan", "nationale", ...]
+  languages           String[]            @default(["fr"])
+  pressCardUrl        String?             @map("press_card_url") // Upload pièce justificative
+  accreditationStatus AccreditationStatus @default(PENDING)
+  accreditedAt        DateTime?           @map("accredited_at")
+  accreditedBy        String?             @map("accredited_by") // Admin userId
+  suspensionReason    String?             @map("suspension_reason")
+  fcmReliabilityScore Float               @default(0) @map("fcm_reliability_score") // % preuves validées
+  consecutiveRejects  Int                 @default(0) @map("consecutive_rejects") // 3 → suspension auto (RG-FCM-03)
+  // Mobile Money (chiffré AES-256) — RG-RESEAU-01: jamais visible par institutions
+  mobileMoneyOperator String?             @map("mobile_money_operator") // WAVE | ORANGE | MTN | MOOV
+  mobileMoneyNumber   String?             @map("mobile_money_number") // chiffré AES-256
+  createdAt           DateTime            @default(now()) @map("created_at")
+  updatedAt           DateTime            @updatedAt @map("updated_at")
+
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mediaOrganization MediaOrganization? @relation(fields: [mediaOrganizationId], references: [id])
+  devices           JournalistDevice[]
+  agoraParticipations AgoraParticipant[]
+  fcmInvitations    FcmInvitation[]
+  fcmProofs         FcmProof[]
+
+  @@map("journalists")
+}
+
+model MediaOrganization {
+  id          String   @id @default(uuid())
+  name        String
+  type        String   // PRESSE_ECRITE | WEB | RADIO | TV | AGENCE_PRESSE
+  website     String?
+  logoUrl     String?  @map("logo_url")
+  city        String?
+  isPartner   Boolean  @default(false) @map("is_partner") // Partenaire Association Publications
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  journalists Journalist[]
+
+  @@map("media_organizations")
+}
+
+model Influencer {
+  id              String   @id @default(uuid())
+  userId          String   @unique @map("user_id")
+  platforms       String[] // ["facebook", "instagram", "tiktok", ...]
+  audienceSize    Int      @default(0) @map("audience_size")
+  verified        Boolean  @default(false)
+  mobileMoneyOperator String? @map("mobile_money_operator")
+  mobileMoneyNumber   String? @map("mobile_money_number") // chiffré
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("influencers")
+}
+
+model JournalistDevice {
+  id            String         @id @default(uuid())
+  journalistId  String         @map("journalist_id")
+  platform      DevicePlatform
+  appVersion    String         @map("app_version")
+  osVersion     String?        @map("os_version")
+  pushToken     String?        @map("push_token")
+  pushEnabled   Boolean        @default(true) @map("push_enabled")
+  webrtcCapable Boolean        @default(true) @map("webrtc_capable")
+  isBlocked     Boolean        @default(false) @map("is_blocked") // TRUE si > 90j sans update
+  lastSeenAt    DateTime       @default(now()) @map("last_seen_at")
+  createdAt     DateTime       @default(now()) @map("created_at")
+
+  journalist Journalist @relation(fields: [journalistId], references: [id], onDelete: Cascade)
+
+  @@index([journalistId, platform])
+  @@map("journalist_devices")
+}
+
+// ============================================================
+// MODULE 1 — ÉMISSION : Communiqués de presse
+// ============================================================
+
+model Communique {
+  id              String           @id @default(uuid())
+  institutionId   String           @map("institution_id")
+  title           String
+  chapeau         String?          // 2-5 lignes (RG-EMI-02)
+  bodyContent     String           @map("body_content") // Corps principal
+  contactPresse   String?          @map("contact_presse") // Obligatoire (RG-EMI-02)
+  status          CommuniqueStatus @default(DRAFT)
+  sha256Hash      String?          @map("sha256_hash") // Empreinte intégrité (F-EMI-04)
+  publishedAt     DateTime?        @map("published_at")
+  createdById     String           @map("created_by_id")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+
+  institution  Institution          @relation(fields: [institutionId], references: [id])
+  formats      CommuniqueFormat_[]  // 3 formats auto (F-EMI-01)
+  targets      CommuniqueTarget[]   // Journalistes ciblés (F-EMI-02)
+  distributions CommuniqueDistribution[]
+  attachments  CommuniqueAttachment[]
+  // Lien avec AGORA et FCM
+  agoraRoom    AgoraRoom?           @relation("CommuniqueAgora")
+  fcmPool      FcmPool?             @relation("CommuniqueFcm")
+  amplification AmplificationCampaign?
+
+  @@map("communiques")
+}
+
+model CommuniqueFormat_ {
+  id            String          @id @default(uuid())
+  communiqueId  String          @map("communique_id")
+  format        CommuniqueFormat
+  content       String          // Contenu formaté
+  metaTitle     String?         @map("meta_title") // SEO (format WEB)
+  metaDesc      String?         @map("meta_desc")
+  socialVisual  String?         @map("social_visual") // URL visuel (format RESEAUX)
+  createdAt     DateTime        @default(now()) @map("created_at")
+
+  communique Communique @relation(fields: [communiqueId], references: [id], onDelete: Cascade)
+
+  @@unique([communiqueId, format])
+  @@map("communique_formats")
+}
+
+model CommuniqueTarget {
+  id            String   @id @default(uuid())
+  communiqueId  String   @map("communique_id")
+  journalistId  String?  @map("journalist_id")
+  email         String?  // Pour ciblage externe
+  sentAt        DateTime? @map("sent_at")
+  openedAt      DateTime? @map("opened_at") // Tracking ouverture email
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  communique Communique @relation(fields: [communiqueId], references: [id], onDelete: Cascade)
+
+  @@map("communique_targets")
+}
+
+model CommuniqueDistribution {
+  id            String   @id @default(uuid())
+  communiqueId  String   @map("communique_id")
+  channel       String   // EMAIL | WHATSAPP | PLATFORM
+  recipientCount Int     @map("recipient_count")
+  sentAt        DateTime @map("sent_at")
+  justificatifUrl String? @map("justificatif_url") // PDF justificatif (F-EMI-04)
+
+  communique Communique @relation(fields: [communiqueId], references: [id], onDelete: Cascade)
+
+  @@map("communique_distributions")
+}
+
+model CommuniqueAttachment {
+  id            String   @id @default(uuid())
+  communiqueId  String   @map("communique_id")
+  fileName      String   @map("file_name")
+  fileUrl       String   @map("file_url")
+  fileType      String   @map("file_type") // image | video | pdf
+  fileSizeBytes Int      @map("file_size_bytes")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  communique Communique @relation(fields: [communiqueId], references: [id], onDelete: Cascade)
+
+  @@map("communique_attachments")
+}
+
+// Listes de diffusion sauvegardables (F-EMI-02)
+model DiffusionList {
+  id              String   @id @default(uuid())
+  institutionId   String   @map("institution_id")
+  name            String
+  journalistIds   String[] @map("journalist_ids")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("diffusion_lists")
+}
+
+// ============================================================
+// MODULE 2 — AGORA : Salles de presse virtuelles
+// ============================================================
+
+model AgoraRoom {
+  id                String          @id @default(uuid())
+  institutionId     String          @map("institution_id")
+  communiqueId      String?         @unique @map("communique_id")
+  roomType          AgoraRoomType   @map("room_type")
+  title             String
+  description       String?
+  scheduledAt       DateTime        @map("scheduled_at")
+  startedAt         DateTime?       @map("started_at")
+  endedAt           DateTime?       @map("ended_at")
+  status            AgoraRoomStatus @default(PENDING)
+  maxParticipants   Int             @map("max_participants")
+  brandingLogo      String?         @map("branding_logo")
+  brandingColor     String?         @map("branding_color")
+  invitationToken   String?         @unique @map("invitation_token") // JWT 48h
+  recordingUrl      String?         @map("recording_url")
+  recordingStatus   RecordingStatus @default(PENDING) @map("recording_status")
+  pressKitUrl       String?         @map("press_kit_url")
+  replayExpiresAt   DateTime?       @map("replay_expires_at")
+  paymentId         String?         @map("payment_id")
+  fcmPoolId         String?         @map("fcm_pool_id")
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+
+  institution   Institution       @relation(fields: [institutionId], references: [id])
+  communique    Communique?       @relation("CommuniqueAgora", fields: [communiqueId], references: [id])
+  payment       Payment?          @relation(fields: [paymentId], references: [id])
+  fcmPool       FcmPool?          @relation(fields: [fcmPoolId], references: [id])
+  participants  AgoraParticipant[]
+  qaQuestions   AgoraQuestion[]
+  chatMessages  AgoraChatMessage[]
+
+  @@map("agora_rooms")
+}
+
+model AgoraParticipant {
+  id              String          @id @default(uuid())
+  roomId          String          @map("room_id")
+  journalistId    String?         @map("journalist_id")
+  userId          String?         @map("user_id")
+  role            ParticipantRole
+  connectionMode  ConnectionMode  @map("connection_mode")
+  joinedAt        DateTime?       @map("joined_at")
+  leftAt          DateTime?       @map("left_at")
+  durationSeconds Int?            @map("duration_seconds")
+  audioEnabled    Boolean         @default(true) @map("audio_enabled")
+  videoEnabled    Boolean         @default(true) @map("video_enabled")
+  invitedAt       DateTime        @default(now()) @map("invited_at")
+  confirmedAt     DateTime?       @map("confirmed_at")
+
+  room       AgoraRoom   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  journalist Journalist? @relation(fields: [journalistId], references: [id])
+
+  @@map("agora_participants")
+}
+
+model AgoraQuestion {
+  id        String   @id @default(uuid())
+  roomId    String   @map("room_id")
+  askedBy   String   @map("asked_by") // Nom + média
+  question  String
+  answered  Boolean  @default(false)
+  answeredAt DateTime? @map("answered_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  room AgoraRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@map("agora_questions")
+}
+
+model AgoraChatMessage {
+  id        String   @id @default(uuid())
+  roomId    String   @map("room_id")
+  senderName String  @map("sender_name")
+  senderMedia String? @map("sender_media")
+  content   String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  room AgoraRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@map("agora_chat_messages")
+}
+
+// ============================================================
+// MODULE 4 — FCM : Fonds de Couverture Média
+// ============================================================
+
+model FcmPool {
+  id              String        @id @default(uuid())
+  institutionId   String        @map("institution_id")
+  communiqueId    String?       @unique @map("communique_id")
+  name            String
+  totalFunded     Int           @default(0) @map("total_funded") // Montant total alimenté FCFA
+  totalSpent      Int           @default(0) @map("total_spent")  // Montant total versé
+  totalCommission Int           @default(0) @map("total_commission") // 15% HÉRALDO
+  status          FcmPoolStatus @default(PENDING)
+  // Conditions FCM (RG-FCM-02 — visibles par journalistes, non modifiables après invitation)
+  amountPerArticle    Int?      @map("amount_per_article")
+  amountPerTvReport   Int?      @map("amount_per_tv_report")
+  amountPerRadio      Int?      @map("amount_per_radio")
+  amountPerSocialPost Int?      @map("amount_per_social_post")
+  publicationDeadlineHours Int  @default(48) @map("publication_deadline_hours") // 24 | 48 | 72
+  closedAt        DateTime?     @map("closed_at")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  institution  Institution      @relation(fields: [institutionId], references: [id])
+  communique   Communique?      @relation("CommuniqueFcm", fields: [communiqueId], references: [id])
+  invitations  FcmInvitation[]
+  transactions FcmTransaction[]
+  agoraRooms   AgoraRoom[]
+  fundings     FcmFunding[]
+
+  @@map("fcm_pools")
+}
+
+model FcmFunding {
+  id        String   @id @default(uuid())
+  poolId    String   @map("pool_id")
+  amount    Int      // FCFA
+  paymentId String   @map("payment_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  pool    FcmPool @relation(fields: [poolId], references: [id])
+  payment Payment @relation(fields: [paymentId], references: [id])
+
+  @@map("fcm_fundings")
+}
+
+model FcmInvitation {
+  id              String              @id @default(uuid())
+  poolId          String              @map("pool_id")
+  journalistId    String              @map("journalist_id")
+  status          FcmInvitationStatus @default(PENDING)
+  respondedAt     DateTime?           @map("responded_at")
+  createdAt       DateTime            @default(now()) @map("created_at")
+
+  pool       FcmPool   @relation(fields: [poolId], references: [id], onDelete: Cascade)
+  journalist Journalist @relation(fields: [journalistId], references: [id])
+  proofs     FcmProof[]
+
+  @@unique([poolId, journalistId])
+  @@map("fcm_invitations")
+}
+
+model FcmProof {
+  id              String       @id @default(uuid())
+  invitationId    String       @map("invitation_id")
+  journalistId    String       @map("journalist_id")
+  proofType       ProofType    @map("proof_type")
+  proofUrl        String       @map("proof_url")
+  coverageType    CoverageType @map("coverage_type")
+  amountDue       Int          @map("amount_due")       // Montant brut
+  commissionRate  Float        @default(15.0) @map("commission_rate")
+  amountNet       Int?         @map("amount_net")        // amount_due * 0.85
+  status          ProofStatus  @default(PENDING)
+  reviewedById    String?      @map("reviewed_by_id")
+  reviewedAt      DateTime?    @map("reviewed_at")
+  rejectReason    String?      @map("reject_reason")
+  transactionId   String?      @unique @map("transaction_id")
+  createdAt       DateTime     @default(now()) @map("created_at")
+
+  invitation  FcmInvitation  @relation(fields: [invitationId], references: [id])
+  journalist  Journalist     @relation(fields: [journalistId], references: [id])
+  reviewedBy  User?          @relation("ProofReviewer", fields: [reviewedById], references: [id])
+  transaction FcmTransaction? @relation(fields: [transactionId], references: [id])
+
+  @@index([status, createdAt])
+  @@map("fcm_proofs")
+}
+
+model FcmTransaction {
+  id              String        @id @default(uuid())
+  poolId          String        @map("pool_id")
+  journalistId    String        @map("journalist_id")
+  amountGross     Int           @map("amount_gross")
+  commissionAmount Int          @map("commission_amount") // 15%
+  amountNet       Int           @map("amount_net")
+  operator        PaymentOperator
+  mobileMoneyRef  String?       @map("mobile_money_ref")
+  status          PaymentStatus @default(PENDING)
+  paidAt          DateTime?     @map("paid_at")
+  createdAt       DateTime      @default(now()) @map("created_at")
+
+  pool  FcmPool   @relation(fields: [poolId], references: [id])
+  proof FcmProof?
+
+  @@map("fcm_transactions")
+}
+
+// ============================================================
+// MODULE 5 — AMPLIFICATION 360°
+// ============================================================
+
+model AmplificationCampaign {
+  id              String           @id @default(uuid())
+  institutionId   String           @map("institution_id")
+  communiqueId    String?          @unique @map("communique_id")
+  type            AmplificationType
+  status          String           @default("PENDING") // PENDING | ACTIVE | COMPLETED
+  reachEstimated  Int              @default(0) @map("reach_estimated")
+  reachActual     Int?             @map("reach_actual")
+  paymentId       String?          @map("payment_id")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+
+  institution Institution @relation(fields: [institutionId], references: [id])
+  communique  Communique? @relation(fields: [communiqueId], references: [id])
+  socialPosts SocialPost[]
+
+  @@map("amplification_campaigns")
+}
+
+model SocialPost {
+  id          String   @id @default(uuid())
+  campaignId  String   @map("campaign_id")
+  platform    String   // facebook | instagram | whatsapp | twitter
+  postUrl     String?  @map("post_url")
+  content     String
+  reach       Int      @default(0)
+  likes       Int      @default(0)
+  shares      Int      @default(0)
+  postedAt    DateTime? @map("posted_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  campaign AmplificationCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@map("social_posts")
+}
+
+// ============================================================
+// MODULE 6 — IMPACT : Mesure et reporting
+// ============================================================
+
+model ImpactReport {
+  id              String   @id @default(uuid())
+  institutionId   String   @map("institution_id")
+  communiqueId    String?  @map("communique_id")
+  agoraRoomId     String?  @map("agora_room_id")
+  // Formule portée = (Nb journaux × Tirage) + (Articles web × Audience) + Reach social + WhatsApp
+  totalReachEstimated Int  @default(0) @map("total_reach_estimated")
+  pressReach      Int      @default(0) @map("press_reach")
+  webReach        Int      @default(0) @map("web_reach")
+  socialReach     Int      @default(0) @map("social_reach")
+  whatsappReach   Int      @default(0) @map("whatsapp_reach")
+  journalistsTargeted Int  @default(0) @map("journalists_targeted")
+  journalistsPresent  Int  @default(0) @map("journalists_present")
+  articlesPublished   Int  @default(0) @map("articles_published")
+  fcmTotalPaid        Int  @default(0) @map("fcm_total_paid")
+  reportPdfUrl    String?  @map("report_pdf_url")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  institution Institution @relation(fields: [institutionId], references: [id])
+
+  @@map("impact_reports")
+}
+
+// ============================================================
+// PAIEMENTS (Wave, Orange, MTN, Moov, CinetPay, Virement)
+// ============================================================
+
+model Payment {
+  id              String          @id @default(uuid())
+  institutionId   String?         @map("institution_id")
+  amount          Int             // FCFA
+  currency        String          @default("XOF")
+  operator        PaymentOperator
+  operatorRef     String?         @map("operator_ref") // Référence opérateur
+  status          PaymentStatus   @default(PENDING)
+  description     String?
+  confirmedAt     DateTime?       @map("confirmed_at")
+  createdAt       DateTime        @default(now()) @map("created_at")
+
+  institution  Institution?     @relation(fields: [institutionId], references: [id])
+  webhooks     PaymentWebhook[]
+  subscriptions Subscription[]
+  agoraRooms   AgoraRoom[]
+  fcmFundings  FcmFunding[]
+  invoice      Invoice?
+
+  @@map("payments")
+}
+
+model PaymentWebhook {
+  id          String   @id @default(uuid())
+  paymentId   String?  @map("payment_id")
+  operator    String
+  rawPayload  String   @map("raw_payload") @db.Text
+  signatureValid Boolean @map("signature_valid")
+  processedAt DateTime? @map("processed_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  payment Payment? @relation(fields: [paymentId], references: [id])
+
+  @@map("payment_webhooks")
+}
+
+model Invoice {
+  id          String   @id @default(uuid())
+  paymentId   String   @unique @map("payment_id")
+  invoiceRef  String   @unique @map("invoice_ref")
+  pdfUrl      String?  @map("pdf_url")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  payment Payment @relation(fields: [paymentId], references: [id])
+
+  @@map("invoices")
+}
+
+// ============================================================
+// NOTIFICATIONS
+// ============================================================
+
+model Notification {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  senderId    String?  @map("sender_id")
+  channel     String   // PUSH | EMAIL | SMS | WHATSAPP | IN_APP
+  subject     String?
+  body        String
+  read        Boolean  @default(false)
+  sentAt      DateTime? @map("sent_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  sender User? @relation("NotificationSender", fields: [senderId], references: [id])
+
+  @@index([userId, read])
+  @@map("notifications")
+}
+
+model NotificationTemplate {
+  id          String   @id @default(uuid())
+  code        String   @unique // AGORA_INVITE | FCM_PROOF_VALIDATED | etc.
+  channel     String   // EMAIL | SMS | PUSH
+  subject     String?
+  body        String   @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("notification_templates")
+}
+
+// ============================================================
+// AUDIT & SÉCURITÉ
+// ============================================================
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  userId      String?  @map("user_id")
+  action      String   // CREATE | UPDATE | DELETE | LOGIN | PAYMENT | etc.
+  entity      String   // communique | agora_room | fcm_proof | etc.
+  entityId    String?  @map("entity_id")
+  ipAddress   String?  @map("ip_address")
+  userAgent   String?  @map("user_agent")
+  details     Json?    // Détails contextuels
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([entity, entityId])
+  @@index([userId, createdAt])
+  @@map("audit_logs")
+}

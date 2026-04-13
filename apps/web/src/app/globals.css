@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+@theme {
+  --color-navy: #0D1B3E;
+  --color-navy-light: #1A2D5A;
+  --color-navy-dark: #080F24;
+  --color-gold: #C8A45C;
+  --color-gold-light: #D4B876;
+  --color-gold-dark: #A88A3E;
+  --color-orange: #E8742E;
+  --color-orange-light: #F09050;
+  --color-green: #2D8B4E;
+  --color-green-light: #3AAF63;
+  --color-ivory: #F5F3EF;
+  --color-ivory-dark: #E8E4DC;
+  --color-warm-gray: #9B9487;
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Glassmorphism utilities */
+.glass {
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow:
+    0 8px 32px rgba(13, 27, 62, 0.06),
+    0 2px 8px rgba(13, 27, 62, 0.04);
+}
+
+.glass-card-dark {
+  background: rgba(13, 27, 62, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(200, 164, 92, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.glass-nav {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(13, 27, 62, 0.08);
+}
+
+/* Gradient backgrounds */
+.gradient-hero {
+  background: linear-gradient(135deg, #0D1B3E 0%, #1A2D5A 40%, #0D1B3E 100%);
+}
+
+.gradient-gold {
+  background: linear-gradient(135deg, #C8A45C 0%, #D4B876 50%, #C8A45C 100%);
+}
+
+.gradient-accent {
+  background: linear-gradient(135deg, #E8742E 0%, #C8A45C 100%);
+}
+
+/* Premium text gradient */
+.text-gradient-gold {
+  background: linear-gradient(135deg, #C8A45C, #D4B876, #C8A45C);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Smooth scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(13, 27, 62, 0.2);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(13, 27, 62, 0.4);
+}
+
+/* Form input focus ring */
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(200, 164, 92, 0.3);
+  border-color: #C8A45C;
+}

@@ -1,0 +1,38 @@
+version: "3.9"
+
+services:
+  # PostgreSQL 16
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: heraldo_dev
+      POSTGRES_USER: heraldo
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-heraldo_dev_2026}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  # Redis 7 — Sessions + Cache
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+  # mediasoup SFU — Salles AGORA WebRTC (Phase 2)
+  # mediasoup:
+  #   build: ./apps/mediasoup
+  #   ports:
+  #     - "4000:4000"
+  #     - "40000-40100:40000-40100/udp"
+  #   environment:
+  #     MEDIASOUP_MIN_PORT: 40000
+  #     MEDIASOUP_MAX_PORT: 40100
+
+volumes:
+  postgres_data:
+  redis_data:

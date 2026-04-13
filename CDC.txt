@@ -1,0 +1,1026 @@
+
+
+
+H É R A L D O
+"Votre message, notre mission."
+Plateforme numérique de diffusion et d'activation médiatique — CI / UEMOA
+CAHIER DES CHARGES FONCTIONNEL
+
+CDC-HERALDO-001 — Version 1.0 — Avril 2026
+
+
+Réf. document
+Domaine
+Version
+Date
+Confidentialité
+CDC-HERALDO-001
+Cahier des Charges Fonctionnel
+1.0
+Avril 2026
+CONFIDENTIEL — Usage restreint
+
+
+Document confidentiel — Tous droits réservés HÉRALDO — Avril 2026
+
+SOMMAIRE
+
+I.	Présentation générale et fiche d'identité
+II.	Contexte, problème résolu et positionnement
+III.	Les 5 acteurs — rôles, droits et accès
+IV.	Module 1 — ÉMISSION : Diffusion de communiqués
+V.	Module 2 — AGORA : Salle de presse virtuelle (Web + App téléchargeable)
+VI.	Module 3 — RÉSEAU : Base de données médias accrédités
+VII.	Module 4 — FCM : Fonds de Couverture Média
+VIII.	Module 5 — AMPLIFICATION : Diffusion 360°
+IX.	Module 6 — IMPACT : Mesure et reporting
+X.	Règles de gestion métier (RG-01 à RG-45)
+XI.	Parcours utilisateurs (User Stories)
+XII.	Exigences non fonctionnelles
+XIII.	Intégrations et services tiers
+XIV.	Application téléchargeable HÉRALDO Journaliste
+XV.	Plan de déploiement, jalons et budget
+XVI.	Glossaire
+
+I. PRÉSENTATION GÉNÉRALE ET FICHE D'IDENTITÉ
+
+1.1  Fiche d'identité du projet
+
+Champ
+Valeur
+Nom du produit
+HÉRALDO
+Référence CDC
+CDC-HERALDO-001
+Version document
+1.0 — Avril 2026
+Type de projet
+Plateforme SaaS B2B — Communication institutionnelle et relation presse
+Marché initial
+Côte d'Ivoire — Abidjan (Phase 0 à M8)
+Extension Phase 2
+Sénégal (M18) — Burkina Faso, Mali (M24) — Bénin (M30)
+Segment clients
+Mairies · Ministères · Députés · Conseils régionaux · Agences RP · ONG
+Segment utilisateurs
+Journalistes accrédités · Influenceurs CI · Collaborateurs agences
+Modèle économique
+Abonnements annuels + À l'acte (salles, studio, packs) + Commissions FCM 15%
+Langues V1
+Français
+Langues V2
+Anglais (extension UEMOA)
+Plateformes V1
+Web responsive (Chrome, Firefox, Safari, Edge) — PWA mobile
+Plateformes V2
+App iOS téléchargeable + App Android téléchargeable (HÉRALDO Journaliste)
+Référence légale
+Structure juridique CI en cours de constitution — Réglementation CNPCI / HACA
+
+1.2  Marché adressable et objectifs chiffrés
+
+Indicateur
+An 1
+An 3
+Chiffre d'affaires
+27 300 000 FCFA
+127 800 000 FCFA
+Clients institutionnels actifs
+~35 clients
+~200 clients CI + UEMOA
+Journalistes accrédités plateforme
+50 médias / 150 journalistes
+500 médias / 2 000 journalistes
+Salles AGORA organisées
+~120 salles/an
+~500 salles/an
+Transactions FCM traitées
+~500 transactions/an
+~5 000 transactions/an
+Pénétration marché CI
+10%
+40%
+
+II. CONTEXTE, PROBLÈME RÉSOLU ET POSITIONNEMENT
+
+2.1  Diagnostic du marché ivoirien de la communication institutionnelle
+La relation presse en Côte d'Ivoire fonctionne encore largement sur des pratiques informelles héritées de plusieurs décennies. Aucune plateforme numérique structurée n'existe aujourd'hui pour gérer de bout en bout la communication médiatique des institutions publiques et privées.
+
+Dysfonctionnement observé
+Acteur impacté
+Coût estimé
+Solution HÉRALDO
+Per diems cash versés avant les événements sans garantie de publication
+Institution payeur
+2 à 10 M FCFA/an gaspillés
+FCM — Paiement à la preuve de couverture
+Absence de base de données journalistes qualifiée et à jour
+Institution + Agence RP
+Taux publication < 20% des communiqués envoyés
+RÉSEAU — Base accrédités vérifiés et segmentés
+Points de presse physiques logistiquement lourds et coûteux
+Institution
+500 000 à 2 000 000 FCFA/événement
+AGORA — Salle virtuelle à 75 000 FCFA
+Aucun archivage des actions de communication
+Institution + Journaliste
+Zéro traçabilité en cas de litige
+ÉMISSION — Archivage horodaté + SHA-256
+Absence de mesure d'impact
+Institution
+Impossibilité de justifier le budget communication
+IMPACT — Dashboard portée estimée temps réel
+Aucun outil de coordination pour les journalistes
+Journaliste
+Perte de revenus, désorganisation
+App HÉRALDO Journaliste téléchargeable
+
+2.2  Positionnement stratégique HÉRALDO
+HÉRALDO ne se positionne PAS comme une agence RP numérique. Il se positionne comme une INFRASTRUCTURE DE COMMUNICATION MÉDIATIQUE — un outil quotidien, indispensable, intégré dans les workflows des institutions. Ce positionnement justifie les abonnements annuels et crée une barrière à l'entrée forte par la donnée accumulée.
+
+Concurrent actuel
+Limite
+Avantage HÉRALDO
+Agences RP traditionnelles CI
+Carnet d'adresses personnel, pas d'outil numérique, pas de traçabilité
+Plateforme structurée + FCM + mesure d'impact + app journaliste
+WhatsApp groupes journalistes
+Aucune structure, pas d'archivage, pas de paiement, pas de certification
+Salle professionnelle AGORA + FCM conditionné + accréditation
+Cision / Meltwater
+Inadaptés marché africain, coûts prohibitifs, pas de base CI
+Tarifs accessibles + base médias CI + Mobile Money + UEMOA
+Zoom / Teams (visio)
+Pas de branding institutionnel, pas de FCM, pas d'accréditation journaliste
+AGORA brandée + accréditation numérique + kit média post-event
+
+III. LES 5 ACTEURS — RÔLES, DROITS ET ACCÈS
+
+3.1  Tableau général des acteurs
+
+Code
+Acteur
+Description
+Interface
+Abonnement
+ACT-01
+Institution / Élu
+Mairie, Ministère, Député, Conseil régional, ONG, Entreprise. Émetteur principal du message. Payeur de la plateforme.
+Web desktop + PWA mobile
+HÉRALDO MAIRIE / ÉLU / INSTITUTION / AGENCE
+ACT-02
+Journaliste / Média
+Journaliste professionnel, rédaction web, radio, TV, photographe. Récepteur et diffuseur. Perçoit le FCM.
+Web + App téléchargeable HÉRALDO Journaliste
+Gratuit — accrédité par HÉRALDO ou Association
+ACT-03
+Influenceur / Relais
+Micro-influenceur CI, community manager, relais digital. Amplifie le message sur les réseaux sociaux.
+Web + App mobile
+Gratuit — validé par HÉRALDO
+ACT-04
+Agence RP
+Cabinet conseil en communication, agence PR. Gère plusieurs clients via un compte unique.
+Web desktop
+HÉRALDO AGENCE — multi-comptes clients
+ACT-05
+Admin HÉRALDO
+Équipe plateforme. Modération, validation accréditations, gestion litiges FCM, reporting global.
+Back-office dédié
+—
+
+3.2  Matrice des droits par acteur
+
+Fonctionnalité
+ACT-01
+ACT-02
+ACT-03
+ACT-04
+ACT-05
+Créer un communiqué
+✅ OUI
+❌ NON
+❌ NON
+✅ OUI (pour clients)
+✅ OUI (modération)
+Accéder à la salle AGORA (organisateur)
+✅ OUI
+❌ NON
+❌ NON
+✅ OUI
+✅ OUI
+Rejoindre une salle AGORA (participant)
+✅ OUI (hôte)
+✅ OUI (invité)
+✅ OUI (si invité)
+✅ OUI
+✅ OUI
+Télécharger app HÉRALDO Journaliste
+Non applicable
+✅ OUI — OBLIGATOIRE pour AGORA
+✅ OUI
+Non applicable
+Non applicable
+Alimenter un FCM
+✅ OUI
+❌ NON
+❌ NON
+✅ OUI
+✅ (ajustement admin)
+Soumettre une preuve FCM
+❌ NON
+✅ OUI
+✅ OUI (si éligible)
+❌ NON
+✅ (validation)
+Consulter le RÉSEAU médias
+✅ OUI (ciblage)
+❌ NON (son profil)
+❌ NON (son profil)
+✅ OUI
+✅ OUI
+Activer AMPLIFICATION
+✅ OUI
+❌ NON
+❌ NON
+✅ OUI
+✅ OUI
+Voir IMPACT / Dashboard
+✅ OUI (ses campagnes)
+❌ NON
+❌ NON
+✅ OUI (ses clients)
+✅ OUI (global)
+Gérer les accréditations
+❌ NON
+❌ NON
+❌ NON
+❌ NON
+✅ OUI
+
+RG-ACT-01 — Un journaliste ne peut rejoindre une salle AGORA depuis un ordinateur que via l'application HÉRALDO Journaliste téléchargée. L'accès depuis un navigateur web standard reste autorisé uniquement pour les connexions depuis mobile (PWA) ou en mode consultation du replay.
+
+RG-ACT-02 — L'accréditation d'un journaliste sur HÉRALDO est validée par l'équipe Admin (ACT-05) dans un délai maximum de 48 heures. Elle est conditionnée à la fourniture d'une pièce justificative d'affiliation à un média reconnu (carte de presse, contrat, attestation rédaction en chef).
+
+RG-ACT-03 — Une Agence RP (ACT-04) peut gérer jusqu'à 5 comptes clients institution avec la formule HÉRALDO AGENCE. Au-delà de 5 clients, un tarif additionnel par compte client supplémentaire est appliqué.
+
+IV. MODULE 1 — ÉMISSION : DIFFUSION DE COMMUNIQUÉS
+
+4.1  Description fonctionnelle
+Le module ÉMISSION est le point d'entrée principal de la plateforme pour les institutions. Il permet de créer, mettre en forme, diffuser et archiver des communiqués de presse en quelques minutes, en ciblant précisément les journalistes et médias pertinents.
+
+4.2  Fonctionnalités détaillées
+
+F-EMI-01 — Création de communiqué multi-format
+	•	Éditeur de texte riche (WYSIWYG) avec formatage (gras, italique, titres, listes, liens).
+	•	Génération automatique en 3 formats à partir d'un seul document saisi :
+	•	Format Presse Écrite : structure officielle (chapeau, corps, notes aux rédactions, contacts).
+	•	Format Web : optimisé SEO avec balises meta titre/description générées automatiquement.
+	•	Format Réseaux Sociaux : version courte 280 caractères + visuel adapté par réseau.
+	•	Upload de pièces jointes : photos HD (max 50 Mo), vidéos (max 200 Mo), PDF.
+	•	Prévisualisation de chaque format avant envoi.
+
+F-EMI-02 — Ciblage intelligent des médias
+	•	Sélection depuis la base RÉSEAU par : secteur d'activité, zone géographique, type de média, langue.
+	•	Listes de diffusion personnalisées sauvegardables par l'institution.
+	•	Suggestion automatique de journalistes selon le secteur du communiqué (IA de recommandation V2).
+	•	Historique de ciblage : voir quels journalistes ont été touchés lors des envois précédents.
+
+F-EMI-03 — Studio éditorial intégré
+	•	Assistant de rédaction intégré : l'institution saisit les points clés, le studio génère le communiqué structuré.
+	•	Modèles de communiqués par type d'événement (inauguration, nomination, résultat, appel d'offres, communiqué politique).
+	•	Relecture automatique : vérification orthographe, cohérence du format, longueur recommandée.
+	•	Service rédaction humain : commande d'un communiqué rédigé par l'équipe HÉRALDO (15 000 FCFA/communiqué).
+
+F-EMI-04 — Archivage et traçabilité
+	•	Archivage automatique de chaque communiqué avec horodatage certifié.
+	•	Empreinte d'intégrité SHA-256 calculée sur le contenu final du communiqué.
+	•	Justificatif de diffusion PDF généré automatiquement (liste des destinataires, date, heure).
+	•	Accès à l'historique complet des communiqués depuis la création du compte.
+
+RG-EMI-01 — Un communiqué ne peut être diffusé que si l'institution a au moins 1 crédit communiqué disponible dans son abonnement ou a effectué un paiement à l'acte confirmé.
+
+RG-EMI-02 — Le format presse écrite d'un communiqué doit obligatoirement inclure : un titre, un chapeau de 2 à 5 lignes, un corps de 150 à 800 mots, un contact presse. Le système bloque la diffusion si ces champs sont absents.
+
+RG-EMI-03 — La mention "Communiqué diffusé via HÉRALDO" est automatiquement ajoutée en bas de chaque communiqué envoyé. Elle n'est pas modifiable par l'institution.
+
+V. MODULE 2 — AGORA : SALLE DE PRESSE VIRTUELLE
+
+5.1  Description fonctionnelle
+La salle AGORA est le produit phare de HÉRALDO. Elle remplace le point de presse physique (500 000 à 2 000 000 FCFA) par une salle virtuelle professionnelle brandée, accessible depuis le web et depuis l'application téléchargeable HÉRALDO Journaliste.
+
+⚠️ EXIGENCE CRITIQUE — Les journalistes doivent télécharger l'application HÉRALDO Journaliste (desktop Windows/Mac ou mobile iOS/Android) pour participer aux salles AGORA en tant que participants actifs avec audio et vidéo. Un accès navigateur est disponible en mode "Observation + Chat" uniquement pour les connexions mobiles sans app installée.
+
+5.2  Tarification des salles
+
+Type de salle
+Prix
+Capacité
+Durée max
+Replay
+Kit média
+AGORA Standard
+75 000 FCFA
+50 participants
+3 heures
+30 jours inclus
+Non inclus
+AGORA Premium
+150 000 FCFA
+200 participants
+6 heures
+60 jours inclus
+Inclus
+AGORA Nationale
+350 000 FCFA
+500+ participants
+Illimitée
+90 jours inclus
+Inclus + streaming pro
+
+5.3  Fonctionnalités AVANT le point de presse
+
+F-AGORA-01 — Création et configuration de la salle
+	•	Création de la salle avec identité visuelle du client : logo, couleurs, nom de l'événement.
+	•	Génération automatique d'un lien d'invitation unique et sécurisé (token JWT 48h).
+	•	Mise en ligne du dossier de presse interactif : PDF navigable, photos HD, vidéos, biographies intervenants.
+	•	Configuration de la liste d'accréditations : journalistes invités depuis le RÉSEAU ou par email.
+	•	Paramétrage des droits participants : micro activé/désactivé par défaut, caméra, partage écran.
+
+F-AGORA-02 — Invitations et accréditations
+	•	Envoi automatique des invitations aux journalistes sélectionnés avec lien téléchargement application HÉRALDO.
+	•	Rappels automatiques : J-7, J-3, J-1 et H-2 avant le début de la salle.
+	•	Badge d'accréditation numérique généré pour chaque journaliste acceptant l'invitation.
+	•	Suivi des confirmations en temps réel depuis le tableau de bord organisateur.
+
+5.4  Fonctionnalités PENDANT le point de presse
+
+F-AGORA-03 — Interface organisateur (via Web)
+	•	Tableau de contrôle : activation/désactivation micro et caméra par participant.
+	•	Salle brandée en permanent : logo et nom du client dans l'interface visible par tous les participants.
+	•	Partage d'écran, lecture de vidéos, présentation de documents PDF en direct.
+	•	Séance Q&A structurée : les journalistes lèvent la main, l'organisateur accorde la parole avec attribution nominale.
+	•	Chat modéré en temps réel avec attribution du message au média du journaliste.
+	•	Enregistrement automatique de la session (audio + vidéo) dès le début.
+
+F-AGORA-04 — Interface journaliste (via App HÉRALDO téléchargeable)
+	•	Connexion sécurisée via code d'accréditation ou lien invitation.
+	•	Audio et vidéo HD avec réduction de bruit de fond adaptée aux connexions CI (optimisation bande passante).
+	•	Accès au dossier de presse interactif depuis l'app pendant la session.
+	•	Fonction "Lever la main" pour le Q&A. Chat avec journalistes et organisateur.
+	•	Sous-titrage automatique en français (IA — V2).
+	•	Notification push de rappel avant la session (si app installée).
+
+F-AGORA-05 — Modes de connexion selon appareil
+
+Mode de connexion
+Appareil
+Niveau d'accès
+Téléchargement requis
+Application HÉRALDO Desktop
+PC Windows / Mac
+Participant complet : audio + vidéo + chat + Q&A + dossier de presse
+✅ OUI — Obligatoire
+Application HÉRALDO Mobile
+iOS / Android
+Participant complet : audio + vidéo + chat + Q&A
+✅ OUI — Recommandé
+Navigateur Web mobile (PWA)
+Smartphone (sans app)
+Observation + Chat uniquement (pas de micro ni caméra)
+❌ NON — Accès limité
+Navigateur Web desktop
+PC (sans app)
+Interdit pour participants actifs — affiche lien de téléchargement
+❌ NON — Bloqué
+
+5.5  Fonctionnalités APRÈS le point de presse
+
+F-AGORA-06 — Post-événement automatique
+	•	Replay disponible en téléchargement haute qualité sous 2 heures après la fin de la session.
+	•	Kit média complet envoyé automatiquement par email à tous les participants : photos, vidéos, communiqué final, replay.
+	•	Rapport de présence détaillé : liste nominative des présents, médias représentés, durée de connexion de chacun.
+	•	Rapport de diffusion : documents téléchargés, questions posées, interactions chat.
+	•	Facture et justificatif envoyés automatiquement au client.
+	•	Déclenchement automatique du FCM si un fonds de couverture a été configuré pour l'événement.
+
+RG-AGORA-01 — Tout journaliste souhaitant participer activement (audio + vidéo) à une salle AGORA doit avoir téléchargé et installé l'application HÉRALDO Journaliste sur son appareil. Les invitations envoyées incluent systématiquement le lien de téléchargement (App Store, Google Play, Windows .exe, Mac .dmg).
+
+RG-AGORA-02 — L'enregistrement d'une salle AGORA est automatiquement activé dès l'ouverture de la salle. L'organisateur peut désactiver l'enregistrement manuellement. Les participants sont informés visuellement de l'état d'enregistrement en permanence.
+
+RG-AGORA-03 — Une salle AGORA ne peut être lancée que si le paiement correspondant a été confirmé (Mobile Money ou virement). Aucun délai de paiement post-événement n'est accordé.
+
+RG-AGORA-04 — Le replay d'une salle AGORA est accessible depuis l'interface Web et depuis l'application HÉRALDO. Il est disponible pendant la durée définie par le type de salle (30, 60 ou 90 jours) puis archivé. L'institution peut télécharger une copie permanente dans les 24h suivant l'événement.
+
+VI. MODULE 3 — RÉSEAU : BASE DE DONNÉES MÉDIAS ACCRÉDITÉS
+
+6.1  Description fonctionnelle
+Le RÉSEAU est l'actif stratégique central de HÉRALDO et sa principale barrière à l'entrée concurrentielle. C'est la base de données unifiée de tous les journalistes, médias et influenceurs accrédités sur la plateforme, gérée en partenariat avec l'Association des Directeurs de Publications.
+
+6.2  Structure des profils
+
+F-RESEAU-01 — Profil Journaliste / Média
+	•	Informations de base : nom, prénom, photo, numéro de téléphone (chiffré), email professionnel.
+	•	Affiliation média : nom du journal/radio/TV/site, poste, date de début, responsable hiérarchique.
+	•	Spécialités éditoriales : politique, économie, société, sport, culture, international, local.
+	•	Zone géographique de couverture : commune, ville, nationale, internationale.
+	•	Langue(s) de travail : français, anglais, langues locales CI.
+	•	Badge accréditation HÉRALDO : Validé / En attente / Suspendu.
+	•	Historique HÉRALDO : événements auxquels il a participé, preuves FCM soumises, taux de publication.
+	•	Coordonnées Mobile Money : Wave CI, Orange Money CI, MTN MoMo CI (pour réception FCM).
+
+F-RESEAU-02 — Accréditation et validation
+	•	Demande d'accréditation : formulaire en ligne + upload pièce justificative (carte de presse, contrat, attestation).
+	•	Validation par Admin HÉRALDO dans un délai maximum de 48 heures.
+	•	Accréditation automatique pour les membres de l'Association des Directeurs de Publications (partenaire fondateur).
+	•	Suspension d'accréditation : déclenchée automatiquement en cas de 3 preuves FCM rejetées consécutives.
+
+6.3  Fonctionnalités de ciblage pour les institutions
+
+F-RESEAU-03 — Recherche et ciblage
+	•	Moteur de recherche multi-critères : spécialité + zone + type de média + langue + historique de participation.
+	•	Affichage du score de fiabilité FCM du journaliste (taux de preuves validées sur soumises).
+	•	Listes de diffusion sauvegardables et réutilisables.
+	•	Exportation de la liste de ciblage en PDF (pour archivage). Pas d'export données personnelles brutes.
+
+RG-RESEAU-01 — Les données personnelles des journalistes (téléphone, email, coordonnées bancaires Mobile Money) ne sont jamais visibles par les institutions clientes. Seuls le nom, la spécialité, le média de rattachement et le badge d'accréditation sont affichés dans l'interface de ciblage.
+
+RG-RESEAU-02 — Un journaliste peut à tout moment modifier son profil, mettre à jour ses coordonnées Mobile Money et demander la suppression de son compte. La suppression de compte entraîne l'archivage (pas la destruction) des données pour une durée de 5 ans conformément aux obligations légales CI.
+
+VII. MODULE 4 — FCM : FONDS DE COUVERTURE MÉDIA
+
+7.1  Description fonctionnelle
+Le Fonds de Couverture Média (FCM) est l'innovation centrale de HÉRALDO. Il transforme le per diem cash (pratique informelle, opaque, sans garantie) en un mécanisme digital transparent, conditionné à la preuve de couverture réelle.
+
+PRINCIPE : L'institution ne verse plus d'argent avant l'événement. Elle alimente un fonds digital sur la plateforme. Les journalistes sont payés APRÈS avoir soumis et fait valider leur preuve de couverture (article publié, reportage diffusé, post réseau social). Pas de preuve = pas de paiement.
+
+7.2  Le mécanisme FCM — 5 étapes détaillées
+
+Étape
+Acteur
+Action
+Délai
+Règle associée
+1 — Alimentation
+Institution (ACT-01)
+L'institution crédite son portefeuille FCM sur la plateforme via Mobile Money (Wave, Orange) ou virement bancaire. Le montant est bloqué et non récupérable une fois un événement FCM lancé.
+Immédiat (Mobile Money) / 24-48h (virement)
+RG-FCM-01
+2 — Configuration événement
+Institution (ACT-01)
+L'institution configure les conditions FCM : montant par article presse écrite, montant par reportage TV/radio, montant par post réseau social, délai max de publication accepté (24h, 48h ou 72h).
+Avant invitation journalistes
+RG-FCM-02
+3 — Invitation journalistes
+Système HÉRALDO
+Les journalistes ciblés reçoivent l'invitation avec les conditions FCM visibles. Ils acceptent ou déclinent en connaissance de cause. L'acceptation vaut engagement de couverture.
+Instantané
+RG-FCM-03
+4 — Soumission preuve
+Journaliste (ACT-02)
+Après l'événement, le journaliste soumet sa preuve de couverture : URL de l'article publié, capture écran horodatée, lien vidéo. La preuve est soumise depuis l'app HÉRALDO Journaliste ou le web.
+Dans le délai défini
+RG-FCM-04
+5 — Validation et paiement
+Admin HÉRALDO (ACT-05)
+L'Admin valide la preuve sous 4 heures. Dès validation, le montant FCM est envoyé automatiquement sur le compte Mobile Money du journaliste. Commission HÉRALDO 15% prélevée automatiquement.
+< 4h après soumission
+RG-FCM-05
+
+7.3  Règles de gestion FCM
+RG-FCM-01 — Le solde FCM alimenté pour un événement est bloqué dès le lancement de l'invitation. Si le montant réel des preuves validées est inférieur au fonds alloué, le solde résiduel est recrédité automatiquement sur le compte de l'institution dans les 7 jours suivant la clôture de l'événement.
+
+RG-FCM-02 — Les montants FCM configurés par l'institution sont visibles par les journalistes avant qu'ils acceptent l'invitation. Ils ne peuvent pas être modifiés après l'envoi des invitations.
+
+RG-FCM-03 — Un journaliste peut décliner une invitation FCM sans pénalité. Il peut accepter et ne pas soumettre de preuve — dans ce cas il ne perçoit aucun paiement. L'absence de preuve n'entraîne pas de sanction sauf en cas de 3 absences consécutives (suspension temporaire d'accréditation FCM).
+
+RG-FCM-04 — La preuve de couverture soumise par un journaliste doit être publique et vérifiable via un lien URL actif. Une capture écran seule n'est acceptée que si le contenu n'est pas disponible en ligne (ex : journal papier) et doit être accompagnée d'une attestation de publication signée par le rédacteur en chef.
+
+RG-FCM-05 — La commission HÉRALDO est de 15% de chaque transaction FCM validée. Elle est prélevée automatiquement sur le montant du fonds avant versement au journaliste. Exemple : FCM configuré à 10 000 FCFA par article → journaliste perçoit 8 500 FCFA → HÉRALDO perçoit 1 500 FCFA.
+
+RG-FCM-06 — Tout litige entre une institution et un journaliste sur la validité d'une preuve FCM est arbitré par l'Admin HÉRALDO dans un délai de 24 heures. La décision Admin est définitive. En cas de rejet de la preuve, aucun paiement n'est effectué.
+
+RG-FCM-07 — Le FCM est disponible pour les journalistes accrédités HÉRALDO uniquement. Un journaliste suspendu ne peut ni participer à un événement FCM ni soumettre de preuve. Les fonds alloués à un journaliste suspendu sont redistribués aux autres participants actifs de l'événement.
+
+VIII. MODULE 5 — AMPLIFICATION : DIFFUSION 360°
+
+8.1  Description fonctionnelle
+Le module AMPLIFICATION permet à l'institution d'élargir la portée de sa communication au-delà des médias traditionnels. Il active simultanément les réseaux sociaux, les groupes WhatsApp Business et le réseau d'influenceurs CI.
+
+8.2  Fonctionnalités détaillées
+
+F-AMP-01 — Publication automatique réseaux sociaux
+	•	Connexion OAuth des pages officielles du client : Facebook, Instagram, LinkedIn, Twitter/X.
+	•	Publication automatique du communiqué au format adapté à chaque réseau dès la diffusion presse.
+	•	Planification de publication : l'institution choisit l'heure de publication optimale suggérée par HÉRALDO.
+	•	Suivi des statistiques de portée par réseau (reach, impressions, engagements).
+
+F-AMP-02 — Diffusion WhatsApp Business
+	•	Envoi du communiqué aux groupes WhatsApp des médias partenaires HÉRALDO via l'API WhatsApp Business.
+	•	Format adapté : texte court + lien vers le communiqué complet + pièce jointe photo.
+	•	Rapport de livraison : nombre de messages délivrés, lus, renvoyés.
+
+F-AMP-03 — Pack Influenceurs CI
+	•	Réseau d'influenceurs CI vérifiés (audience minimum 5 000 abonnés actifs) disponibles à la commande.
+	•	Sélection par : taille d'audience, secteur de spécialité, zone géographique, prix par post.
+	•	Brief partagé directement depuis HÉRALDO. Validation du post par l'institution avant publication.
+	•	Rapport de portée post-publication : reach total, impressions, engagements par influenceur.
+
+F-AMP-04 — Formule de calcul de la portée estimée
+
+Portée estimée = (Nb journaux × Tirage moyen CI) + (Nb articles web × Audience estimée site) + (Reach Facebook + Instagram) + (Membres WhatsApp touchés) + (Audience influenceurs × taux engagement moyen)
+
+RG-AMP-01 — La portée estimée affichée dans le module IMPACT est calculée sur la base des données déclarées par les médias lors de leur accréditation. HÉRALDO ne garantit pas ces chiffres et mentionne systématiquement la mention "Portée estimée" dans tous les rapports.
+
+IX. MODULE 6 — IMPACT : MESURE ET REPORTING
+
+9.1  Description fonctionnelle
+Le module IMPACT transforme chaque action de communication en données mesurables et actionnables. C'est le tableau de bord analytics que l'institution consulte pour justifier et optimiser son budget communication.
+
+9.2  Fonctionnalités détaillées
+
+F-IMPACT-01 — Dashboard temps réel
+	•	Vue synthétique : portée totale de la période, nombre de communiqués diffusés, salles AGORA organisées, FCM versés.
+	•	Graphiques d'évolution mensuelle et annuelle.
+	•	Comparaison avec la période précédente (mois/mois, année/année).
+	•	Alertes : communiqué avec faible taux d'ouverture, salle avec faible taux de présence, FCM non consommé.
+
+F-IMPACT-02 — Rapport par communiqué
+	•	Taux d'ouverture : % journalistes ayant ouvert l'email d'invitation.
+	•	Taux de publication : % journalistes ayant publié un article après réception.
+	•	Médias ayant publié : liste nominative des publications avec liens et dates.
+	•	Portée estimée totale de la campagne de diffusion.
+
+F-IMPACT-03 — Rapport par salle AGORA
+	•	Liste nominative des présents avec durée de connexion individuelle.
+	•	Questions posées en Q&A : texte intégral archivé.
+	•	Documents du dossier de presse téléchargés : par qui, combien de fois.
+	•	Statistiques de replay : nombre de vues, durée moyenne de visionnage.
+
+F-IMPACT-04 — Rapport FCM
+	•	Total versé sur la période par événement et par journaliste (anonymisé dans le rapport client).
+	•	Taux de couverture : % journalistes invités ayant publié.
+	•	ROI FCM : coût total FCM / portée générée.
+	•	Rapport de compliance : preuves validées, rejetées, en attente.
+
+F-IMPACT-05 — Export et partage
+	•	Export PDF du rapport complet avec logo et identité visuelle du client.
+	•	Export Excel/CSV des données brutes pour traitement interne.
+	•	Partage du rapport par lien sécurisé avec une durée de validité configurable (pour usage DG ou élu).
+
+X. RÈGLES DE GESTION MÉTIER — RG-01 À RG-45
+
+10.1  Règles de gestion compte et abonnements
+RG-01 — Un compte institution est activé dès réception du premier paiement d'abonnement confirmé. Avant activation, l'institution peut accéder à une démo limitée (2 communiqués max, 1 salle AGORA de démonstration de 15 minutes).
+
+RG-02 — L'abonnement annuel est facturé en totalité à la date de souscription. Aucun remboursement partiel n'est accordé en cas de résiliation anticipée. Une période de 30 jours de grâce est accordée en cas de non-renouvellement.
+
+RG-03 — Un compte inactif (aucune connexion) depuis 12 mois consécutifs est automatiquement suspendu et l'institution notifiée par email. Les données sont conservées 24 mois supplémentaires avant archivage définitif.
+
+RG-04 — Un compte Agence RP (ACT-04) peut gérer jusqu'à 5 comptes clients dans la formule standard. Chaque client additionnel est facturé 120 000 FCFA/an. Les données de chaque client sont strictement cloisonnées.
+
+10.2  Règles de gestion des communiqués
+RG-05 — Un communiqué diffusé ne peut pas être supprimé. Il peut être "archivé" (masqué dans l'interface) mais reste accessible dans les logs système pour des raisons légales et d'archivage.
+
+RG-06 — Le délai maximum de diffusion d'un communiqué après validation est de 5 minutes. En cas de dépassement, un incident est créé automatiquement et l'équipe support est alertée.
+
+10.3  Règles de gestion des salles AGORA
+RG-07 — Une salle AGORA annulée moins de 24h avant son début n'est pas remboursée. Une annulation au-delà de 24h avant est remboursée à 80% (20% de frais de traitement).
+
+RG-08 — La capacité d'une salle AGORA est strictement limitée au nombre de participants défini par le type de salle. Toute demande de connexion au-delà de la capacité est automatiquement placée en liste d'attente.
+
+RG-09 — Un enregistrement de salle AGORA stocké sur les serveurs HÉRALDO est supprimé définitivement à l'expiration de la période de replay sauf si l'institution a téléchargé une copie locale dans le délai imparti.
+
+10.4  Règles de gestion des paiements
+RG-10 — Tous les paiements entrants sur la plateforme (abonnements, salles, FCM) sont traités via les opérateurs Mobile Money CI (Wave, Orange Money, MTN MoMo, Moov Money) ou virement bancaire. Le paiement par carte bancaire internationale est disponible uniquement pour les abonnements institutions diaspora.
+
+RG-11 — Un reçu de paiement est généré et envoyé automatiquement par email à l'institution dans les 5 minutes suivant la confirmation du paiement. Il est également accessible depuis l'espace client.
+
+RG-12 — En cas d'échec de paiement Mobile Money (timeout, solde insuffisant), l'utilisateur dispose de 3 nouvelles tentatives dans les 30 minutes avant que la session de paiement soit invalidée.
+
+10.5  Règles de gestion de la confidentialité
+RG-13 — Les coordonnées téléphoniques et Mobile Money des journalistes sont chiffrées en base de données (AES-256) et ne sont jamais exposées aux institutions clientes, aux agences RP ni aux autres journalistes.
+
+RG-14 — Les communications entre un journaliste et HÉRALDO (soumission preuves, litiges FCM) sont strictement confidentielles et ne sont pas accessibles aux institutions clientes.
+
+10.6  Règles de gestion de l'application téléchargeable
+RG-15 — L'application HÉRALDO Journaliste doit être disponible sur les 4 canaux de téléchargement : App Store Apple, Google Play Store, site officiel HÉRALDO (Windows .exe et Mac .dmg). Le lien de téléchargement est inclus dans toutes les invitations de salle AGORA.
+
+RG-16 — L'application HÉRALDO Journaliste doit fonctionner en mode dégradé (audio uniquement) sur les connexions inférieures à 1 Mbps pour garantir l'accessibilité depuis les zones à couverture internet limitée en Côte d'Ivoire et en UEMOA.
+
+RG-17 — Les mises à jour de l'application HÉRALDO Journaliste sont automatiquement poussées. Une version vieille de plus de 90 jours est bloquée à la connexion avec notification de mise à jour obligatoire.
+
+XI. PARCOURS UTILISATEURS PRINCIPAUX
+
+11.1  Parcours Institution — Organiser un point de presse AGORA
+
+Étape
+Action utilisateur
+Action système
+Règle
+1
+Connexion à l'espace institution
+Authentification JWT — Dashboard affiché
+RG-01
+2
+Clic "Nouvelle salle AGORA"
+Formulaire de création affiché — Sélection type salle (Standard / Premium / Nationale)
+RG-AGORA-03
+3
+Configuration : titre, date, heure, identité visuelle
+Upload logo client — Prévisualisation salle brandée affichée
+—
+4
+Upload dossier de presse
+PDF + photos + vidéos traités — Dossier de presse interactif généré
+RG-EMI-02
+5
+Sélection journalistes invités depuis RÉSEAU
+Ciblage multi-critères — Liste invitation préparée
+RG-RESEAU-01
+6
+Configuration FCM (optionnel)
+Montants par type de couverture saisis — Fonds bloqué après paiement
+RG-FCM-02
+7
+Paiement de la salle
+Redirection Mobile Money — Confirmation reçue — Salle activée
+RG-10
+8
+Envoi invitations
+Emails + SMS + notifications app envoyés — Lien téléchargement app inclus
+RG-AGORA-01
+9
+Jour J — Ouverture salle
+Salle accessible depuis tableau de bord — Journalistes rejoignent via app
+RG-AGORA-04
+10
+Post-événement
+Rapport + replay + kit média générés automatiquement
+RG-AGORA-02
+
+11.2  Parcours Journaliste — Rejoindre une salle AGORA
+
+Étape
+Action utilisateur
+Action système
+Règle
+1
+Réception invitation (email / SMS / push)
+Lien salle + lien téléchargement app inclus
+RG-AGORA-01
+2
+Téléchargement app HÉRALDO Journaliste
+Redirection App Store / Google Play / Site HÉRALDO
+RG-15
+3
+Création compte / connexion
+Vérification accréditation HÉRALDO
+RG-ACT-02
+4
+Clic "Rejoindre la salle"
+Accès au dossier de presse. Entrée dans la salle AGORA.
+RG-AGORA-04
+5
+Participation active (audio + vidéo + Q&A)
+Enregistrement actif — Attribution nominale des questions
+RG-AGORA-02
+6
+Soumission preuve FCM (si FCM activé)
+Formulaire soumission preuve — URL article ou capture
+RG-FCM-04
+7
+Réception paiement FCM (si preuve validée)
+Virement Mobile Money automatique — Reçu généré
+RG-FCM-05
+
+XII. EXIGENCES NON FONCTIONNELLES
+
+12.1  Performance
+Indicateur
+Exigence
+Contexte
+Temps de chargement page
+< 3 secondes
+Connexion 3G CI (5 Mbps)
+Latence audio/vidéo AGORA
+< 200 ms
+Connexion stable 1 Mbps minimum
+Mode audio dégradé AGORA
+< 100 ms
+Connexion 512 Kbps (zones rurales CI / UEMOA)
+Traitement paiement Mobile Money
+< 10 secondes
+Confirmation transaction Wave / Orange
+Génération rapport IMPACT
+< 30 secondes
+Rapport complet avec graphiques
+Disponibilité plateforme
+99,5% uptime
+Maintenance programmée hors heures ouvrées CI
+Capacité simultanée AGORA Nationale
+500 participants
+Serveurs redondants requis
+
+12.2  Sécurité
+	•	Authentification : JWT access token 15 min + refresh token 7 jours. MFA optionnel en V2.
+	•	Chiffrement données sensibles : AES-256 pour coordonnées journalistes et données bancaires Mobile Money.
+	•	HTTPS obligatoire sur toutes les routes. TLS 1.3 minimum.
+	•	Webhooks Mobile Money : signature HMAC-SHA256 vérifiée avant tout traitement.
+	•	Liens invitation AGORA : token JWT signé avec expiration 48 heures.
+	•	Logs de sécurité : toutes les actions sensibles (paiements, modifications profil, accès salles) sont enregistrées avec horodatage, IP et user-agent.
+
+12.3  Accessibilité et compatibilité
+Plateforme
+Version minimum supportée
+Priorité
+Chrome
+Version 100+
+P0 — Principal navigateur CI
+Firefox
+Version 95+
+P1
+Safari (Mac + iOS)
+Version 15+
+P1 — App Store requis
+Edge
+Version 100+
+P2
+Android (App HÉRALDO)
+Android 8.0+ (API 26)
+P0
+iOS (App HÉRALDO)
+iOS 14+
+P0
+Windows (App desktop)
+Windows 10+
+P0
+Mac (App desktop)
+macOS 11 Big Sur+
+P0
+
+12.4  Conformité légale CI et UEMOA
+	•	Conformité loi CI N°2013-450 du 19/06/2013 sur la protection des données personnelles.
+	•	Conformité réglementation CNPCI (Conseil National de la Presse CI) sur les accréditations journalistes.
+	•	Conformité HACA (Haute Autorité de la Communication Audiovisuelle CI) pour la diffusion audiovisuelle.
+	•	Conformité BCEAO Instruction 001-01-2024 pour les transactions Mobile Money.
+	•	Mentions légales obligatoires sur tous les communiqués diffusés via la plateforme.
+
+XIII. INTÉGRATIONS ET SERVICES TIERS
+
+Service tiers
+Usage
+Criticité
+Phase
+Wave CI
+Paiement abonnements + FCM journalistes + salles AGORA
+CRITIQUE — sans Wave pas de paiement
+V1 MVP
+Orange Money CI
+Paiement abonnements + FCM journalistes + salles AGORA
+CRITIQUE
+V1 MVP
+MTN MoMo CI
+Paiement abonnements + FCM journalistes
+HAUTE
+V1 MVP
+Moov Money CI
+Paiement abonnements + FCM journalistes
+HAUTE
+V1
+WhatsApp Business API
+Diffusion communiqués + invitations AGORA + rappels
+HAUTE
+V1 MVP
+Facebook Graph API
+Publication automatique communiqués + stats reach
+MOYENNE
+V1
+Instagram API
+Publication automatique communiqués + stats reach
+MOYENNE
+V1
+Twitter/X API
+Publication automatique communiqués
+FAIBLE
+V2
+LinkedIn API
+Publication automatique communiqués B2B
+FAIBLE
+V2
+SMTP (Mailgun / SendGrid)
+Envoi emails invitations, rapports, factures
+CRITIQUE
+V1 MVP
+SMS Gateway CI (Twilio / CinetPay SMS)
+Rappels SMS invitations + confirmations FCM
+HAUTE
+V1 MVP
+WebRTC (serveur TURN/STUN)
+Infrastructure audio/vidéo salles AGORA
+CRITIQUE — sans WebRTC pas de salle AGORA
+V1 MVP
+CDN (Cloudflare)
+Distribution assets + protection DDoS + performances CI/UEMOA
+HAUTE
+V1 MVP
+App Store Apple
+Distribution app iOS HÉRALDO Journaliste
+HAUTE
+V1
+Google Play Store
+Distribution app Android HÉRALDO Journaliste
+HAUTE
+V1
+Stripe / CinetPay CB
+Paiements carte bancaire internationale (diaspora UEMOA)
+MOYENNE
+V2
+
+XIV. APPLICATION TÉLÉCHARGEABLE — HÉRALDO JOURNALISTE
+
+14.1  Raison d'être de l'application
+L'application HÉRALDO Journaliste est un composant obligatoire de l'expérience salle AGORA. Elle est conçue pour garantir une qualité audio/vidéo optimale dans les conditions réseau de Côte d'Ivoire et de la zone UEMOA, et pour offrir aux journalistes un espace de travail dédié intégrant la gestion des invitations, la participation aux salles et la soumission des preuves FCM.
+
+14.2  Plateformes et versions
+
+Plateforme
+Format de distribution
+Version OS minimum
+Fonctionnalités complètes
+Android
+Google Play Store + APK direct téléchargeable sur site HÉRALDO
+Android 8.0+ (API 26)
+✅ OUI — Audio + Vidéo + FCM + Notifications push
+iOS
+App Store Apple uniquement
+iOS 14+
+✅ OUI — Audio + Vidéo + FCM + Notifications push
+Windows desktop
+Installateur .exe téléchargeable sur site HÉRALDO
+Windows 10+
+✅ OUI — Audio + Vidéo + FCM + Affichage dossier de presse HD
+Mac desktop
+Installateur .dmg téléchargeable sur site HÉRALDO
+macOS 11 Big Sur+
+✅ OUI — Audio + Vidéo + FCM + Affichage dossier de presse HD
+Web (PWA mobile)
+Navigateur mobile — Pas d'installation
+iOS 14+ / Android 8+
+⚠️ LIMITÉ — Observation + Chat uniquement (pas de caméra/micro)
+
+14.3  Fonctionnalités de l'application HÉRALDO Journaliste
+
+F-APP-01 — Espace personnel journaliste
+	•	Dashboard : invitations en cours, événements à venir, preuves FCM en attente, solde FCM reçu.
+	•	Profil : mise à jour des informations, upload pièce justificative d'accréditation.
+	•	Portefeuille Mobile Money : configuration du numéro de réception FCM par opérateur préféré.
+
+F-APP-02 — Invitations et salles AGORA
+	•	Réception des invitations avec push notification si app installée.
+	•	Consultation du dossier de presse de chaque salle avant la session.
+	•	Bouton "Rejoindre la salle" : connexion audio/vidéo directe avec optimisation bande passante automatique.
+	•	Mode dégradé automatique : si connexion < 1 Mbps, bascule en audio uniquement sans intervention de l'utilisateur.
+
+F-APP-03 — Soumission des preuves FCM
+	•	Formulaire de soumission de preuve directement depuis l'app.
+	•	URL article : vérification automatique que le lien est accessible publiquement.
+	•	Capture écran : upload photo depuis la galerie ou prise directe.
+	•	Suivi du statut de validation en temps réel : En attente / Validée / Rejetée.
+	•	Notification push à la validation et au virement FCM.
+
+F-APP-04 — Replays et archives
+	•	Accès aux replays des salles auxquelles le journaliste a participé.
+	•	Téléchargement des kits médias reçus.
+	•	Historique complet des participations et des FCM perçus.
+
+RG-APP-01 — L'application HÉRALDO Journaliste est gratuite et ne nécessite aucun abonnement de la part du journaliste. Le financement de son développement et de sa maintenance est couvert par les commissions FCM et les abonnements institutions.
+
+RG-APP-02 — L'application doit fonctionner en mode hors-ligne pour la consultation du dossier de presse téléchargé et de l'historique des événements. La connexion internet est uniquement requise pour la participation live à une salle AGORA et la soumission de preuves FCM.
+
+RG-APP-03 — L'application doit être certifiée par Apple (App Store Review Guidelines) et Google (Play Store Policy). Cette certification est un prérequis au lancement commercial de HÉRALDO. Le délai de certification App Store Apple est estimé à 7-14 jours.
+
+XV. PLAN DE DÉPLOIEMENT, JALONS ET BUDGET
+
+15.1  Phases de déploiement
+
+Phase
+Période
+Objectif principal
+Livrables
+Budget estimé
+Phase 0 — Fondation
+M0 – M2
+Constitution juridique + partenariat Association Publications + recrutement CTO + CDC technique
+Structure légale constituée · Partenariat signé · CTO recruté · CDC technique validé
+2 000 000 FCFA
+Phase 1 — MVP
+M2 – M5
+Développement modules ÉMISSION + AGORA web + RÉSEAU + FCM + App Journaliste V1
+Plateforme web fonctionnelle · App Android + iOS téléchargeable · 5 médias pilotes onboardés
+8 000 000 FCFA
+Phase 2 — Lancement
+M5 – M8
+Lancement commercial Abidjan · 20 premiers clients · Activation FCM
+20 clients institutionnels · 30 journalistes accrédités · 5 premières salles AGORA payantes
+3 000 000 FCFA
+Phase 3 — Croissance CI
+M8 – M12
+Démarchage UVICOCI + Assemblée Nationale + modules AMPLIFICATION + IMPACT
+100 clients CI · 150 journalistes accrédités · 22 M FCFA ARR
+4 000 000 FCFA
+Phase 4 — UEMOA Sénégal
+M12 – M18
+Partenariat local Sénégal · Adaptation réglementaire · Lancement Dakar
+50 clients Sénégal · 15 M FCFA ARR Sénégal · App localisée
+6 000 000 FCFA
+Phase 5 — UEMOA
+M18 – M24
+Burkina Faso + Mali · Marque HÉRALDO AFRICA · 80 M FCFA ARR total
+4 pays actifs · 300 clients total · 2 000 journalistes accrédités
+8 000 000 FCFA
+
+15.2  Besoins d'investissement initial (15 à 20 M FCFA)
+
+Poste
+Montant
+Détail
+Développement plateforme (MVP)
+8 000 000 FCFA
+Web + App Android/iOS/Desktop + Back-office Admin
+Infrastructure technique (12 mois)
+1 500 000 FCFA
+Serveurs cloud + CDN + WebRTC + SMS + stockage vidéo
+Constitution structure juridique
+800 000 FCFA
+Notaire + greffe + ouverture compte pro
+Fonds de roulement (6 mois)
+4 500 000 FCFA
+Salaires équipe 2 personnes + charges fixes
+Commercial et partenariats
+2 000 000 FCFA
+Déplacements, présentations, démonstrations, événements
+Réserve stratégique et imprévus
+1 200 000 FCFA
+10% budget total
+TOTAL
+18 000 000 FCFA
+—
+
+15.3  Jalons critiques
+	•	J+60 : Constitution de la structure juridique et signature partenariat Association des Directeurs de Publications.
+	•	J+90 : Recrutement CTO validé. Démarrage développement MVP.
+	•	J+150 : Livraison MVP web + première salle AGORA de démonstration avec app journaliste.
+	•	J+180 : Première publication sur App Store et Google Play de l'application HÉRALDO Journaliste.
+	•	J+240 : Premier client institutionnel payant (abonnement MAIRIE signé).
+	•	J+365 : 22 M FCFA ARR · 30 médias accrédités · 100 salles AGORA organisées.
+	•	J+540 : Lancement Sénégal. 50 clients Sénégal opérationnels.
+	•	J+730 : HÉRALDO AFRICA — 4 pays UEMOA · 80 M FCFA ARR.
+
+XVI. GLOSSAIRE
+
+Terme
+Définition
+AGORA
+Salle de presse virtuelle brandée HÉRALDO. Remplace le point de presse physique.
+Accréditation HÉRALDO
+Badge numérique délivré à un journaliste après vérification de son affiliation média.
+App HÉRALDO Journaliste
+Application téléchargeable (iOS, Android, Windows, Mac) dédiée aux journalistes pour participer aux salles AGORA.
+ARR
+Annual Recurring Revenue — Revenus récurrents annuels issus des abonnements.
+CDC
+Cahier des Charges — Document de référence définissant les exigences fonctionnelles du projet.
+FCM
+Fonds de Couverture Média — Mécanisme de rémunération conditionnée à la preuve de couverture.
+HACA
+Haute Autorité de la Communication Audiovisuelle — Régulateur audiovisuel CI.
+CNPCI
+Conseil National de la Presse CI — Organisme de régulation de la presse écrite CI.
+Kit média
+Ensemble de ressources (photos, vidéos, communiqué final, replay) envoyé aux journalistes après une salle AGORA.
+Mobile Money
+Service de paiement mobile (Wave, Orange Money, MTN MoMo, Moov Money CI).
+Per diem
+Somme en cash versée aux journalistes avant un événement de presse — pratique que le FCM numérise et conditionne.
+Portée estimée
+Indicateur calculé par HÉRALDO représentant le nombre total de personnes potentiellement touchées par une campagne.
+PWA
+Progressive Web App — Application web installable depuis le navigateur mobile.
+RÉSEAU
+Module base de données des journalistes et médias accrédités sur HÉRALDO.
+Replay
+Enregistrement d'une salle AGORA disponible en téléchargement après l'événement.
+SaaS
+Software as a Service — Modèle de distribution logicielle par abonnement via internet.
+Score FCM
+Taux de preuves FCM validées sur preuves soumises par un journaliste — indicateur de fiabilité.
+UEMOA
+Union Économique et Monétaire Ouest-Africaine — Zone de 8 pays dont CI, Sénégal, Burkina, Mali, Bénin.
+WebRTC
+Web Real-Time Communication — Technologie open source pour l'audio/vidéo en temps réel dans les navigateurs et applications.
+
+
+CDC-HERALDO-001 — Version 1.0 — Avril 2026
+HÉRALDO — "Votre message, notre mission." — Document confidentiel
+

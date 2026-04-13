@@ -1,0 +1,1007 @@
+
+
+
+H É R A L D O
+Plateforme numérique de diffusion et d'activation médiatique
+CAHIER DES SPÉCIFICATIONS TECHNIQUES
+
+CST-HERALDO-001 — Version 1.0 — Avril 2026
+
+
+Réf.
+Titre
+Version
+Date
+Niveau
+CST-HERALDO-001
+Cahier des Spécifications Techniques
+1.0
+Avril 2026
+CONFIDENTIEL — Équipe technique uniquement
+
+
+Document confidentiel — Usage restreint — Équipe technique HÉRALDO uniquement
+
+SOMMAIRE
+
+I.	Architecture générale et stack technique
+II.	Base de données — Schéma complet PostgreSQL
+III.	Backend API — Architecture NestJS et endpoints
+IV.	Frontend Web — Architecture React
+V.	Application HÉRALDO Journaliste (Desktop + Mobile)
+VI.	Module WebRTC — Salles AGORA audio/vidéo
+VII.	Module FCM — Flux de paiement Mobile Money
+VIII.	Module ÉMISSION — Moteur de diffusion
+IX.	Sécurité et authentification
+X.	Infrastructure et déploiement
+XI.	Intégrations tierces — Spécifications API
+XII.	Performance et scalabilité
+XIII.	Tests et UAT
+XIV.	Documentation API
+
+I. ARCHITECTURE GÉNÉRALE ET STACK TECHNIQUE
+
+1.1  Vue d'ensemble de l'architecture
+HÉRALDO est construit sur une architecture 3-tiers (Présentation / Logique métier / Données) avec séparation stricte des responsabilités. L'API REST NestJS constitue le cœur de la logique métier. Les clients (web, app desktop, app mobile) consomment cette API via HTTPS. Les salles AGORA utilisent WebRTC pour la communication temps réel.
+
+CLIENT WEB (React/Next.js) ──────────────────────────────────┐ APP JOURNALISTE (Electron desktop / React Native mobile)  ──┤──► API REST NestJS (Port 443) APP MOBILE PWA ─────────────────────────────────────────────┘         |                                                                    PostgreSQL 16                                                               Serveur TURN/STUN (WebRTC)                                                               Redis (sessions + cache)                                                               CDN Cloudflare (assets + vidéos)
+
+1.2  Stack technique — Choix définitifs
+
+Couche
+Technologie
+Version
+Justification
+Backend API
+NestJS (Node.js TypeScript)
+NestJS 10 / Node.js 20 LTS
+Typage strict, modules découplés, guards JWT natifs, adapté microservices futurs
+Base de données
+PostgreSQL
+16.x
+ACID, triggers, JSONB, recherche full-text, parfait pour règles métier complexes
+ORM
+Prisma
+5.x
+Type-safety bout en bout, migrations versionnées, Prisma Studio pour admin DB
+Cache / Sessions
+Redis
+7.x
+Sessions JWT blacklist, cache requêtes fréquentes, file paiements Mobile Money
+Frontend Web
+Next.js (React)
+Next.js 15 / React 19
+SSR pour SEO institutions, App Router, Turbopack, PWA support natif
+App Desktop Journaliste
+Electron + React
+Electron 32
+Cross-platform Windows/Mac, accès APIs système (micro, caméra, notifications)
+App Mobile Journaliste
+React Native + Expo
+RN 0.75 / Expo 52
+iOS + Android depuis codebase unique, accès caméra/micro natif, push notifications
+Audio/Vidéo (AGORA)
+WebRTC + mediasoup
+mediasoup 3.x
+SFU (Selective Forwarding Unit) — supporte 500+ participants sans dégradation
+Authentification
+JWT (Access 15min + Refresh 7j)
+jsonwebtoken 9.x
+Stateless, révocable via Redis blacklist, RBAC par rôle
+Paiement Mobile Money
+Wave CI / Orange Money / MTN / Moov
+API v1
+Direct via webhooks HMAC-SHA256 + CinetPay comme agrégateur fallback
+Email transactionnel
+Mailgun (primaire) + SendGrid (fallback)
+API v3/v3
+Deliverability CI optimisée, templates HTML, tracking ouvertures
+SMS CI
+CinetPay SMS / Twilio
+API v2
+Couverture CI + UEMOA, SMS OTP, rappels événements
+Stockage fichiers
+AWS S3 (ou Contabo Object Storage)
+SDK v3
+Vidéos replays, dossiers de presse, photos HD, documents PDF
+CDN
+Cloudflare
+Enterprise / Pro
+Performance CI/UEMOA, DDoS protection, SSL terminaison, cache assets
+Conteneurisation
+Docker + Docker Compose
+Docker 27
+Déploiement reproductible, isolation services, scaling horizontal
+Orchestration (V2)
+Kubernetes (K8s)
+1.31
+Scaling automatique sur pics événements AGORA Nationale
+CI/CD
+GitHub Actions
+—
+Tests auto, build Docker, déploiement staging/prod sur push main
+Monitoring
+Grafana + Prometheus + Sentry
+—
+Métriques infra + APM + alertes erreurs temps réel
+Logging
+ELK Stack (Elasticsearch + Logstash + Kibana)
+8.x
+Centralisation logs, recherche, audit trail BCEAO
+
+II. BASE DE DONNÉES — SCHÉMA COMPLET POSTGRESQL
+
+2.1  Vue d'ensemble des tables
+
+Module
+Tables principales
+Relations clés
+Authentification
+users, sessions, refresh_tokens, roles, permissions
+users → sessions (1:N), users → roles (N:M via user_roles)
+Institutions
+institutions, institution_users, subscriptions, subscription_plans
+institutions → institution_users (1:N), institutions → subscriptions (1:N)
+Journalistes
+journalists, journalist_accreditations, journalist_media
+journalists → journalist_accreditations (1:1), journalists → journalist_media (N:M)
+Communiqués
+communiques, communique_formats, communique_targets, communique_distributions
+communiques → communique_formats (1:3), communiques → communique_distributions (1:N)
+Salles AGORA
+agora_rooms, agora_participants, agora_recordings, agora_press_kits
+agora_rooms → agora_participants (1:N), agora_rooms → agora_recordings (1:1)
+FCM
+fcm_pools, fcm_events, fcm_invitations, fcm_proofs, fcm_transactions
+fcm_events → fcm_invitations (1:N), fcm_proofs → fcm_transactions (1:1)
+Paiements
+payments, payment_webhooks, invoices, refunds
+payments → invoices (1:1), payments → payment_webhooks (1:N)
+Réseau médias
+media_organizations, media_contacts, accreditation_requests
+media_organizations → media_contacts (1:N)
+Amplification
+amplification_campaigns, social_posts, influencer_contracts
+amplification_campaigns → social_posts (1:N)
+Analytics
+impact_reports, reach_metrics, fcm_analytics, subscription_analytics
+impact_reports → reach_metrics (1:N)
+Notifications
+notifications, notification_templates, push_devices
+notifications → push_devices (N:M via notification_deliveries)
+Audit
+audit_logs, security_events, webhook_logs
+Toutes tables → audit_logs (append-only)
+
+2.2  Tables critiques — Schéma détaillé
+
+Table : users
+CREATE TABLE users (
+  user_id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email            VARCHAR(255) UNIQUE NOT NULL,
+  password_hash    VARCHAR(255) NOT NULL,  -- bcrypt cost 12
+  role             user_role_enum NOT NULL,  -- INSTITUTION | JOURNALIST | INFLUENCER | AGENCY | ADMIN
+  status           user_status_enum DEFAULT 'PENDING',  -- PENDING | ACTIVE | SUSPENDED | DELETED
+  full_name        VARCHAR(255) NOT NULL,
+  phone_encrypted  TEXT,  -- AES-256 chiffré
+  avatar_url       TEXT,
+  language         VARCHAR(5) DEFAULT 'fr',
+  last_login_at    TIMESTAMPTZ,
+  email_verified   BOOLEAN DEFAULT FALSE,
+  mfa_enabled      BOOLEAN DEFAULT FALSE,
+  created_at       TIMESTAMPTZ DEFAULT NOW(),
+  updated_at       TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE TYPE user_role_enum AS ENUM ('INSTITUTION','JOURNALIST','INFLUENCER','AGENCY','ADMIN');
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_role_status ON users(role, status);
+
+Table : agora_rooms
+CREATE TABLE agora_rooms (
+  room_id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  institution_id   UUID NOT NULL REFERENCES institutions(institution_id),
+  room_type        agora_type_enum NOT NULL,  -- STANDARD | PREMIUM | NATIONALE
+  title            VARCHAR(500) NOT NULL,
+  scheduled_at     TIMESTAMPTZ NOT NULL,
+  started_at       TIMESTAMPTZ,
+  ended_at         TIMESTAMPTZ,
+  status           agora_status_enum DEFAULT 'PENDING',  -- PENDING | ACTIVE | ENDED | CANCELLED
+  max_participants INTEGER NOT NULL,  -- 50 | 200 | 500
+  branding_logo    TEXT,  -- URL S3
+  branding_color   VARCHAR(7),  -- #HEX
+  invitation_token VARCHAR(100) UNIQUE,  -- JWT signé 48h
+  recording_url    TEXT,  -- URL S3 post-event
+  recording_status recording_status_enum DEFAULT 'PENDING',
+  press_kit_url    TEXT,  -- URL dossier de presse interactif
+  fcm_pool_id      UUID REFERENCES fcm_pools(pool_id),  -- NULL si pas de FCM
+  payment_id       UUID NOT NULL REFERENCES payments(payment_id),
+  replay_expires_at TIMESTAMPTZ,  -- 30 | 60 | 90 jours selon type
+  created_at       TIMESTAMPTZ DEFAULT NOW(),
+  updated_at       TIMESTAMPTZ DEFAULT NOW()
+);
+
+Table : fcm_proofs
+CREATE TABLE fcm_proofs (
+  proof_id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  invitation_id    UUID NOT NULL REFERENCES fcm_invitations(invitation_id),
+  journalist_id    UUID NOT NULL REFERENCES journalists(journalist_id),
+  proof_type       proof_type_enum NOT NULL,  -- URL | SCREENSHOT | PDF
+  proof_url        TEXT NOT NULL,
+  coverage_type    coverage_type_enum NOT NULL,  -- ARTICLE | TV_REPORT | RADIO | SOCIAL_POST
+  amount_due       DECIMAL(12,0) NOT NULL,  -- Montant brut avant commission
+  commission_rate  DECIMAL(4,2) DEFAULT 15.00,  -- 15% HÉRALDO
+  amount_net       DECIMAL(12,0),  -- Calculé : amount_due * (1 - commission_rate/100)
+  status           proof_status_enum DEFAULT 'PENDING',  -- PENDING | VALIDATED | REJECTED
+  reviewed_by      UUID REFERENCES users(user_id),  -- Admin validateur
+  reviewed_at      TIMESTAMPTZ,
+  reject_reason    TEXT,
+  transaction_id   UUID REFERENCES fcm_transactions(transaction_id),
+  created_at       TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_fcm_proofs_status ON fcm_proofs(status, created_at);
+-- Trigger: déclenche paiement Mobile Money automatique après validation
+CREATE OR REPLACE FUNCTION trigger_fcm_payment() RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.status = 'VALIDATED' AND OLD.status = 'PENDING' THEN
+    PERFORM pg_notify('fcm_payment', row_to_json(NEW)::text);
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+Table : journalist_devices (App téléchargeable)
+CREATE TABLE journalist_devices (
+  device_id        UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  journalist_id    UUID NOT NULL REFERENCES journalists(journalist_id),
+  platform         device_platform_enum NOT NULL,  -- ANDROID | IOS | WINDOWS | MAC | WEB_PWA
+  app_version      VARCHAR(20) NOT NULL,  -- ex : "1.2.3"
+  os_version       VARCHAR(50),
+  push_token       TEXT,  -- FCM token (Android) ou APNs token (iOS)
+  push_enabled     BOOLEAN DEFAULT TRUE,
+  webrtc_capable   BOOLEAN DEFAULT TRUE,  -- FALSE pour PWA mobile
+  last_seen_at     TIMESTAMPTZ DEFAULT NOW(),
+  is_blocked       BOOLEAN DEFAULT FALSE,  -- TRUE si version obsolète > 90j
+  created_at       TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_devices_journalist ON journalist_devices(journalist_id, platform);
+
+III. BACKEND API — ARCHITECTURE NESTJS ET ENDPOINTS
+
+3.1  Structure des modules NestJS
+src/
+├── auth/          # JWT, guards, stratégies Passport
+├── users/         # Gestion comptes utilisateurs
+├── institutions/  # Profils institutions, abonnements
+├── journalists/   # Profils journalistes, accréditations, devices
+├── communiques/   # Module ÉMISSION — création, diffusion, archivage
+├── agora/         # Module AGORA — salles, participants, enregistrements
+├── fcm/           # Module FCM — fonds, invitations, preuves, paiements
+├── reseau/        # Module RÉSEAU — base médias, ciblage
+├── amplification/ # Module AMPLIFICATION — réseaux sociaux, WhatsApp, influenceurs
+├── impact/        # Module IMPACT — analytics, rapports
+├── payments/      # Paiements Mobile Money, webhooks, factures
+├── notifications/ # Push, email, SMS — moteur de notification
+├── admin/         # Back-office Admin HÉRALDO
+├── common/        # Guards, interceptors, pipes, decorators partagés
+└── config/        # Configuration, variables d'environnement
+
+3.2  Endpoints API — Référentiel complet
+
+Authentification (AUTH)
+Méthode
+Endpoint
+Description
+Auth requis
+POST
+/v1/auth/register
+Création compte (institution ou journaliste)
+NON
+POST
+/v1/auth/login
+Connexion — retourne access_token + refresh_token
+NON
+POST
+/v1/auth/refresh
+Renouvellement access_token depuis refresh_token
+Bearer refresh
+POST
+/v1/auth/logout
+Révocation refresh_token (blacklist Redis)
+Bearer JWT
+POST
+/v1/auth/verify-email
+Vérification email via token OTP
+NON
+POST
+/v1/auth/forgot-password
+Demande reset mot de passe — envoie email
+NON
+POST
+/v1/auth/reset-password
+Réinitialisation mot de passe via token
+NON
+
+Salles AGORA
+Méthode
+Endpoint
+Description
+Auth requis
+POST
+/v1/agora/rooms
+Créer une nouvelle salle AGORA
+JWT Institution
+GET
+/v1/agora/rooms
+Lister les salles de l'institution connectée
+JWT Institution
+GET
+/v1/agora/rooms/:id
+Détail d'une salle + participants + FCM
+JWT Institution/Admin
+PUT
+/v1/agora/rooms/:id
+Mettre à jour (avant démarrage uniquement)
+JWT Institution
+DELETE
+/v1/agora/rooms/:id
+Annuler une salle (remboursement auto si > 24h)
+JWT Institution
+POST
+/v1/agora/rooms/:id/start
+Démarrer la salle — vérifie paiement confirmé
+JWT Institution
+POST
+/v1/agora/rooms/:id/end
+Terminer la salle — déclenche post-traitement
+JWT Institution/Admin
+POST
+/v1/agora/rooms/:id/invite
+Envoyer invitations journalistes
+JWT Institution
+GET
+/v1/agora/rooms/:id/join
+Rejoindre une salle — via token invitation
+JWT Journaliste
+GET
+/v1/agora/rooms/:id/replay
+Accéder au replay (dans délai)
+JWT Journaliste/Institution
+GET
+/v1/agora/rooms/:id/report
+Rapport post-événement complet
+JWT Institution
+GET
+/v1/agora/webrtc/config
+Configuration TURN/STUN pour app journaliste
+JWT Journaliste
+
+FCM — Fonds de Couverture Média
+Méthode
+Endpoint
+Description
+Auth requis
+POST
+/v1/fcm/pools
+Créer un fonds FCM et y associer un événement
+JWT Institution
+GET
+/v1/fcm/pools/:id
+Détail fonds : solde, invités, preuves, transactions
+JWT Institution
+POST
+/v1/fcm/pools/:id/fund
+Alimenter le fonds (Mobile Money)
+JWT Institution
+POST
+/v1/fcm/events/:id/invite
+Inviter journalistes avec conditions FCM
+JWT Institution
+POST
+/v1/fcm/proofs
+Soumettre une preuve de couverture
+JWT Journaliste
+GET
+/v1/fcm/proofs
+Lister les preuves soumises par le journaliste
+JWT Journaliste
+PUT
+/v1/fcm/proofs/:id/validate
+Valider une preuve — déclenche paiement
+JWT Admin
+PUT
+/v1/fcm/proofs/:id/reject
+Rejeter une preuve avec motif
+JWT Admin
+GET
+/v1/fcm/transactions/my
+Historique FCM reçus par le journaliste
+JWT Journaliste
+
+Application Journaliste — Endpoints dédiés
+Méthode
+Endpoint
+Description
+Auth requis
+POST
+/v1/devices/register
+Enregistrer un device (push token + plateforme + version app)
+JWT Journaliste
+PUT
+/v1/devices/:id
+Mettre à jour push token ou préférences notifications
+JWT Journaliste
+GET
+/v1/journalist/invitations
+Invitations AGORA + FCM en attente
+JWT Journaliste
+POST
+/v1/journalist/invitations/:id/accept
+Accepter une invitation AGORA
+JWT Journaliste
+POST
+/v1/journalist/invitations/:id/decline
+Décliner une invitation AGORA
+JWT Journaliste
+GET
+/v1/journalist/rooms/history
+Historique des salles auxquelles j'ai participé
+JWT Journaliste
+GET
+/v1/journalist/fcm/history
+Historique des FCM reçus avec montants
+JWT Journaliste
+GET
+/v1/journalist/mobile-money
+Coordonnées Mobile Money enregistrées
+JWT Journaliste
+PUT
+/v1/journalist/mobile-money
+Mettre à jour numéro Mobile Money (chiffré AES-256)
+JWT Journaliste
+GET
+/v1/app/version
+Vérifier si la version de l'app est à jour
+Public
+
+IV. FRONTEND WEB — ARCHITECTURE NEXT.JS
+
+4.1  Structure des pages et composants
+app/
+├── (auth)/                    # Pages login, register, reset
+├── (institution)/             # Espace institution (protégé JWT)
+│   ├── dashboard/             # Dashboard principal avec KPIs
+│   ├── communiques/           # ÉMISSION — liste, créer, archiver
+│   ├── agora/                 # AGORA — créer salle, historique
+│   │   └── [id]/              # Détail salle + contrôle live
+│   ├── reseau/                # RÉSEAU — ciblage journalistes
+│   ├── fcm/                   # FCM — créer fonds, suivre preuves
+│   ├── amplification/         # AMPLIFICATION — campagnes sociales
+│   ├── impact/                # IMPACT — rapports et analytics
+│   ├── paiements/             # Historique paiements, factures
+│   └── parametres/            # Profil, identité visuelle, abonnement
+├── (journalist)/              # Espace journaliste (protégé JWT)
+│   ├── dashboard/             # Invitations, FCM en attente
+│   ├── rooms/                 # Salles à rejoindre + replays
+│   ├── fcm/                   # Soumettre preuves, historique reçus
+│   └── profil/                # Profil, Mobile Money, accréditation
+├── (public)/                  # Pages publiques
+│   ├── page.tsx               # Landing page HÉRALDO
+│   ├── telechargement/        # Page téléchargement app journaliste
+│   └── rejoindre/[token]      # Rejoindre une salle AGORA (web)
+└── (admin)/                   # Back-office Admin HÉRALDO
+
+4.2  Page de téléchargement application HÉRALDO Journaliste
+La page /telechargement est une page publique critique — c'est la page vers laquelle pointent tous les liens d'invitation AGORA. Elle doit détecter automatiquement le système d'exploitation du visiteur et proposer le bon lien de téléchargement en premier plan.
+// Detection OS + redirection automatique
+const detectOS = () => {
+  const ua = navigator.userAgent;
+  if (/android/i.test(ua)) return "android";
+  if (/iPad|iPhone|iPod/.test(ua)) return "ios";
+  if (/Win/.test(navigator.platform)) return "windows";
+  if (/Mac/.test(navigator.platform)) return "mac";
+  return "web";
+};
+
+// Liens de téléchargement par plateforme
+const DOWNLOAD_LINKS = {
+  android: "https://play.google.com/store/apps/details?id=ci.heraldo.journalist",
+  ios: "https://apps.apple.com/ci/app/heraldo-journaliste/id[APP_ID]",
+  windows: "https://cdn.heraldo.ci/app/HeraldoJournaliste-Setup-latest.exe",
+  mac: "https://cdn.heraldo.ci/app/HeraldoJournaliste-latest.dmg",
+  web: null  // Mode PWA observation uniquement
+};
+
+V. APPLICATION HÉRALDO JOURNALISTE (DESKTOP + MOBILE)
+
+5.1  Architecture technique
+L'application HÉRALDO Journaliste est construite avec deux codebase partagées : Electron (desktop) et React Native / Expo (mobile), avec un maximum de code partagé via une librairie commune @heraldo/shared.
+
+Composant
+Technologie
+Détail technique
+App Desktop (Windows + Mac)
+Electron 32 + React + Vite
+Main process Node.js + Renderer React. Accès APIs système (micro, caméra, notifications OS, tray icon). Build avec electron-builder.
+App Mobile (iOS + Android)
+React Native 0.75 + Expo 52
+JSX partagé avec l'app desktop. Accès micro/caméra via expo-av. Push notifications via Expo Notifications (FCM/APNs).
+Code partagé
+@heraldo/shared (monorepo)
+Composants UI, hooks, services API, logique WebRTC, gestion état Zustand.
+Gestion état
+Zustand
+Store global : session JWT, profil journaliste, invitations actives, état salle AGORA, preuves FCM.
+Navigation
+React Navigation 7 (mobile) / React Router 6 (desktop)
+Navigations distinctes selon plateforme, routes protégées JWT.
+Audio/Vidéo
+mediasoup-client + react-native-webrtc
+Client WebRTC connecté au serveur mediasoup HÉRALDO. Mode dégradé audio-only si bande passante < 1 Mbps.
+Stockage local
+AsyncStorage (mobile) / Electron Store (desktop)
+Cache invitations, replay téléchargés, préférences utilisateur.
+Distribution desktop
+electron-builder + auto-updater
+Mise à jour automatique silencieuse. Blocage si version > 90 jours.
+
+5.2  Flux de connexion à une salle AGORA depuis l'app
+// 1. Journaliste reçoit notification push
+PushNotification.received → navigate("/invitation/:room_id")
+
+// 2. App vérifie le token d'invitation
+GET /v1/agora/rooms/:id/join
+→ Retourne : { webrtc_server, ice_servers, room_config, press_kit_url }
+
+// 3. Connexion WebRTC via mediasoup
+const device = new mediasoup.Device();
+await device.load({ routerRtpCapabilities });
+
+// 4. Création transport entrant (receive) et sortant (send)
+const sendTransport = await createWebRtcTransport("send");
+const recvTransport = await createWebRtcTransport("recv");
+
+// 5. Détection bande passante et mode dégradé
+const bandwidth = await measureBandwidth();
+if (bandwidth < 1000) {  // < 1 Mbps
+  await producer.pause();  // Désactiver vidéo locale
+  showToast("Mode audio uniquement activé");
+}
+
+// 6. Publication flux audio/vidéo local
+const stream = await getUserMedia({ audio: true, video: bandwidth > 1000 });
+await sendTransport.produce({ track: stream.getVideoTracks()[0] });
+await sendTransport.produce({ track: stream.getAudioTracks()[0] });
+
+5.3  Gestion des mises à jour automatiques
+// electron-updater — main.js
+const { autoUpdater } = require("electron-updater");
+
+autoUpdater.checkForUpdatesAndNotify();
+
+autoUpdater.on("update-available", () => {
+  // Notification silencieuse — téléchargement en background
+});
+
+autoUpdater.on("update-downloaded", () => {
+  // Dialogue : "Mise à jour disponible — Redémarrer maintenant ?"
+  dialog.showMessageBox({ message: "HÉRALDO a été mis à jour..." });
+});
+
+// Blocage version obsolète (> 90 jours)
+// Vérifié à chaque connexion via GET /v1/app/version
+if (isVersionExpired(currentVersion, serverMinVersion)) {
+  showBlockingModal("Votre application est trop ancienne...");
+  openDownloadPage();
+}
+
+VI. MODULE WEBRTC — SALLES AGORA AUDIO/VIDÉO
+
+6.1  Architecture WebRTC — SFU mediasoup
+HÉRALDO utilise une architecture SFU (Selective Forwarding Unit) via mediasoup. Contrairement à une architecture mesh (P2P), le SFU permet à chaque participant de n'envoyer son flux qu'une seule fois vers le serveur, qui le redistribue de manière sélective. Cela permet de supporter 500+ participants sans dégradation des performances.
+
+ARCHITECTURE SFU : Participant A → [Flux audio/vidéo] → Serveur mediasoup → [Sélection] → Participant B, C, D... Chaque participant envoie 1 flux vers le serveur. Le serveur envoie N flux reçus. Avantage : le réseau du participant n'est pas surchargé. Essentiel pour la CI et l'UEMOA.
+
+6.2  Infrastructure TURN/STUN
+// Serveurs ICE configurés pour optimiser la connexion CI/UEMOA
+const ICE_SERVERS = [
+  // STUN public Google (détection IP)
+  { urls: "stun:stun.l.google.com:19302" },
+  { urls: "stun:stun1.l.google.com:19302" },
+  // TURN HÉRALDO (relais si P2P bloqué par firewall)
+  {
+    urls: "turn:turn.heraldo.ci:3478",
+    username: process.env.TURN_USER,
+    credential: process.env.TURN_PASS
+  },
+  // TURN sur TCP 443 (contournement firewalls CI)
+  {
+    urls: "turns:turn.heraldo.ci:443?transport=tcp",
+    username: process.env.TURN_USER,
+    credential: process.env.TURN_PASS
+  }
+];
+
+6.3  Gestion de la bande passante CI/UEMOA
+Connexion disponible
+Mode automatique activé
+Qualité vidéo
+Audio
+> 5 Mbps
+Mode Full HD
+720p 30fps
+Opus 128 kbps — Haute qualité
+2–5 Mbps
+Mode Standard
+480p 25fps
+Opus 64 kbps
+1–2 Mbps
+Mode Basse consommation
+240p 15fps
+Opus 32 kbps
+< 1 Mbps
+Mode Audio uniquement
+Vidéo désactivée automatiquement
+Opus 16 kbps — Confort vocal
+< 256 Kbps
+Mode déconnecté
+Reconnexion automatique toutes les 10s
+—
+
+VII. MODULE FCM — FLUX DE PAIEMENT MOBILE MONEY
+
+7.1  Flux de paiement FCM complet
+// ÉTAPE 1 : Institution alimente son fonds FCM via Wave CI
+POST /v1/fcm/pools/:id/fund
+Body: { operator: "WAVE", amount: 50000, currency: "XOF" }
+→ Système génère deeplink Wave : wave://pay?amount=50000&to=HERALDO_WAVE_ID
+→ Ou redirect vers page paiement CinetPay
+
+// ÉTAPE 2 : Confirmation paiement via Webhook Wave
+POST /v1/webhooks/wave
+Headers: { "X-Wave-Signature": "HMAC-SHA256(body, WAVE_SECRET)" }
+→ Vérification signature HMAC-SHA256
+→ Crédit fonds FCM en base
+→ Notification push à l'institution
+
+// ÉTAPE 3 : Journaliste soumet preuve et validation Admin
+POST /v1/fcm/proofs
+Body: { invitation_id, proof_type: "URL", proof_url, coverage_type: "ARTICLE" }
+→ Preuve stockée status=PENDING
+→ Notification Admin HÉRALDO pour validation
+
+// ÉTAPE 4 : Admin valide → déclenchement paiement automatique
+PUT /v1/fcm/proofs/:id/validate
+→ amount_net = amount_due * 0.85  (commission 15% HÉRALDO)
+→ PostgreSQL trigger → NOTIFY "fcm_payment"
+→ Worker NestJS reçoit notification
+→ Appel API Wave/Orange pour virement Mobile Money journaliste
+→ status=PAID, transaction_id enregistré
+→ Notification push journaliste : "Vous avez reçu [montant] FCFA"
+
+7.2  Webhooks Mobile Money — Sécurité HMAC-SHA256
+// Guard de vérification webhook — commun à tous les opérateurs
+@Injectable()
+export class WebhookGuard implements CanActivate {
+  canActivate(context: ExecutionContext): boolean {
+    const req = context.switchToHttp().getRequest();
+    const operator = req.params.operator;  // wave | orange | mtn | moov
+    const signature = req.headers[`x-${operator}-signature`];
+    const secret = this.configService.get(`WEBHOOK_SECRET_${operator.toUpperCase()}`);
+    const expectedSig = createHmac("sha256", secret)
+      .update(JSON.stringify(req.body)).digest("hex");
+    if (signature !== expectedSig) {
+      this.auditLogger.warn("WEBHOOK_INVALID_SIGNATURE", { operator, ip: req.ip });
+      throw new UnauthorizedException("Invalid webhook signature");
+    }
+    return true;
+  }
+}
+
+VIII. SÉCURITÉ ET AUTHENTIFICATION
+
+8.1  Architecture JWT
+// Configuration JWT
+ACCESS_TOKEN_TTL  = 900     // 15 minutes
+REFRESH_TOKEN_TTL = 604800  // 7 jours
+
+// Payload access token
+{
+  sub: user_id,
+  role: "JOURNALIST" | "INSTITUTION" | "AGENCY" | "ADMIN",
+  institution_id?: uuid,  // Pour institutions et agences
+  journalist_id?: uuid,   // Pour journalistes
+  iat: timestamp,
+  exp: timestamp
+}
+
+// Révocation : liste noire Redis
+// Clé : "blacklist:{jti}" — TTL = temps restant du token
+// Utilisée lors du logout et en cas de compromission compte
+
+8.2  Chiffrement des données sensibles
+// Chiffrement AES-256-GCM pour données journalistes
+import { createCipheriv, createDecipheriv, randomBytes } from "crypto";
+
+const ENCRYPTION_KEY = Buffer.from(process.env.ENCRYPTION_KEY, "hex"); // 32 bytes
+
+export function encrypt(plaintext: string): string {
+  const iv = randomBytes(16);
+  const cipher = createCipheriv("aes-256-gcm", ENCRYPTION_KEY, iv);
+  const encrypted = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return `${iv.toString("hex")}:${tag.toString("hex")}:${encrypted.toString("hex")}`;
+}
+
+// Champs chiffrés : phone_encrypted, mobile_money_number
+// Jamais exposés dans les réponses API aux institutions
+
+8.3  Rate limiting et protection DDoS
+Endpoint
+Limite
+Fenêtre
+Action si dépassement
+POST /auth/login
+5 tentatives
+15 minutes
+Blocage IP temporaire 1h + alerte sécurité
+POST /auth/register
+3 créations
+1 heure par IP
+Captcha requis + alerte si > 10/heure
+POST /v1/fcm/proofs
+10 soumissions
+1 heure par journaliste
+429 Too Many Requests
+GET /v1/agora/webrtc/config
+100 requêtes
+1 minute
+429 — Protection scraping ICE credentials
+POST /v1/webhooks/*
+Illimité
+—
+Validation signature uniquement — pas de rate limit (opérateurs tiers)
+Toutes routes API
+1000 requêtes
+1 minute par IP
+429 + log incident sécurité
+
+IX. INFRASTRUCTURE ET DÉPLOIEMENT
+
+9.1  Architecture serveurs — Phase MVP (M0 à M12)
+
+Serveur
+Type
+Configuration
+Rôle
+APP-01 (Principal)
+VPS Cloud
+8 vCPU / 16 GB RAM / 200 GB SSD / Ubuntu 24.04
+API NestJS + Next.js Frontend + Redis + PostgreSQL
+TURN-01 (WebRTC)
+VPS dédié
+4 vCPU / 8 GB RAM / Abidjan ou Frankfurt
+Serveur TURN/STUN + mediasoup SFU
+STORE-01 (Fichiers)
+Object Storage S3
+5 TB initial + auto-scaling
+Vidéos replays + dossiers de presse + photos + PDFs
+CDN Cloudflare
+CDN Global
+Plan Pro/Business
+Cache assets + DDoS protection + SSL + Abidjan PoP
+
+9.2  Docker Compose — Configuration production
+version: "3.9"
+services:
+  api:
+    image: heraldo-api:latest
+    ports: ["3000:3000"]
+    environment:
+      DATABASE_URL: postgresql://heraldo:${DB_PASS}@postgres:5432/heraldo_prod
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET}
+      WAVE_WEBHOOK_SECRET: ${WAVE_WEBHOOK_SECRET}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+    depends_on: [postgres, redis]
+    restart: unless-stopped
+
+  frontend:
+    image: heraldo-web:latest
+    ports: ["3001:3001"]
+    environment:
+      NEXT_PUBLIC_API_URL: https://api.heraldo.ci
+
+  mediasoup:
+    image: heraldo-mediasoup:latest
+    ports: ["4000:4000", "40000-49999:40000-49999/udp"]
+    environment:
+      MEDIASOUP_MIN_PORT: 40000
+      MEDIASOUP_MAX_PORT: 49999
+
+  postgres:
+    image: postgres:16-alpine
+    volumes: [postgres_data:/var/lib/postgresql/data]
+    environment:
+      POSTGRES_DB: heraldo_prod
+      POSTGRES_PASSWORD: ${DB_PASS}
+
+  redis:
+    image: redis:7-alpine
+    volumes: [redis_data:/data]
+
+  nginx:
+    image: nginx:alpine
+    ports: ["80:80", "443:443"]
+    volumes: [./nginx.conf:/etc/nginx/nginx.conf, ./ssl:/etc/ssl]
+
+9.3  Variables d'environnement requises
+Variable
+Description
+Source
+DATABASE_URL
+URL connexion PostgreSQL avec credentials
+Générée à la création DB
+JWT_SECRET
+Secret signing JWT access tokens (min 64 chars)
+openssl rand -hex 32
+REFRESH_SECRET
+Secret signing JWT refresh tokens (min 64 chars)
+openssl rand -hex 32
+ENCRYPTION_KEY
+Clé chiffrement AES-256 données sensibles (32 bytes hex)
+openssl rand -hex 32
+WAVE_WEBHOOK_SECRET
+Secret HMAC-SHA256 webhooks Wave CI
+Fourni par Wave Business CI
+ORANGE_WEBHOOK_SECRET
+Secret HMAC-SHA256 webhooks Orange Money CI
+Fourni par Orange Money CI
+MTN_WEBHOOK_SECRET
+Secret HMAC-SHA256 webhooks MTN MoMo CI
+Fourni par MTN CI
+MOOV_WEBHOOK_SECRET
+Secret HMAC-SHA256 webhooks Moov Money CI
+Fourni par Moov CI
+WAVE_MERCHANT_ID
+Identifiant marchand Wave CI
+Contrat Wave Business
+ORANGE_MERCHANT_ID
+Identifiant marchand Orange Money CI
+Contrat Orange Money Business
+MTN_MERCHANT_ID
+Identifiant marchand MTN MoMo CI
+Contrat MTN Business
+MAILGUN_API_KEY
+Clé API Mailgun pour emails transactionnels
+Compte Mailgun
+TWILIO_AUTH_TOKEN
+Token Twilio pour SMS CI/UEMOA
+Compte Twilio
+AWS_S3_BUCKET
+Nom bucket S3 stockage fichiers
+AWS Console
+CLOUDFLARE_TOKEN
+Token API Cloudflare
+Cloudflare Dashboard
+TURN_SECRET
+Secret serveur TURN/STUN HÉRALDO
+Généré admin infra
+APPLE_APP_ID
+Bundle ID app iOS HÉRALDO Journaliste
+Apple Developer Account
+GOOGLE_APP_ID
+Package ID app Android HÉRALDO Journaliste
+Google Play Console
+
+X. TESTS ET RECETTE — SCÉNARIOS UAT
+
+10.1  Scénarios UAT critiques
+
+Réf.
+Scénario
+Prérequis
+Résultat attendu
+Criticité
+UAT-01
+Institution crée une salle AGORA Premium et effectue le paiement Wave
+Compte institution actif + Wave Business configuré
+Salle créée · Paiement confirmé via webhook · Email invitation envoyé · Lien téléchargement app inclus
+BLOQUANT
+UAT-02
+Journaliste télécharge l'app Android, se connecte et rejoint la salle AGORA
+App installée Google Play · Token invitation valide
+Connexion réussie · Audio + vidéo actifs · Bande passante détectée · Mode dégradé si < 1 Mbps
+BLOQUANT
+UAT-03
+Journaliste sans app essaie de rejoindre via navigateur desktop
+Lien invitation AGORA valide
+Page de téléchargement affichée · OS détecté automatiquement · Lien .exe ou .dmg proposé
+BLOQUANT
+UAT-04
+Institution configure un FCM à 10 000 FCFA/article · Journaliste soumet preuve · Admin valide
+FCM alimenté · Journaliste accrédité · Mobile Money configuré
+Preuve soumise · Admin notifié · Validation Admin · Virement 8 500 FCFA envoyé · 1 500 FCFA commission
+BLOQUANT
+UAT-05
+Salle AGORA Nationale — 200 participants simultanés
+Serveur mediasoup démarré · 200 comptes test
+Tous connectés < 30s · Latence < 300ms · Pas de coupure · Enregistrement actif
+BLOQUANT
+UAT-06
+Mode dégradé audio-only — simulation réseau < 1 Mbps
+Throttling réseau configuré
+Vidéo désactivée automatiquement · Audio maintenu · Toast informatif affiché
+HAUTE
+UAT-07
+Webhook Wave avec signature invalide reçu
+Endpoint webhook actif
+HTTP 401 retourné · Log d'erreur créé · Aucun traitement effectué
+BLOQUANT
+UAT-08
+Journaliste iOS télécharge l'app App Store et participe à une salle
+iPhone iOS 14+ · App Store CI disponible
+Téléchargement réussi · Installation < 2 min · Connexion salle réussie
+HAUTE
+UAT-09
+Mise à jour automatique app desktop Windows
+App version ancienne installée · Nouveau build disponible
+Notification mise à jour · Téléchargement background · Redémarrage proposé · Nouvelle version active
+HAUTE
+UAT-10
+Communiqué diffusé simultanément à 50 journalistes + publication Facebook automatique
+Compte Facebook Business lié · 50 journalistes accrédités
+Emails envoyés < 5 min · Publication Facebook créée · Rapport diffusion disponible
+HAUTE
+
+XI. DOCUMENTATION API — STANDARDS ET FORMATS
+
+11.1  Conventions REST
+// Format de réponse standard
+{
+  "success": true,
+  "data": { ... },       // Payload principal
+  "meta": {              // Pagination si liste
+    "page": 1,
+    "per_page": 20,
+    "total": 145,
+    "total_pages": 8
+  },
+  "timestamp": "2026-04-01T10:30:00Z"
+}
+
+// Format d'erreur standard
+{
+  "success": false,
+  "error": {
+    "code": "ROOM_NOT_FOUND",       // Code interne unique
+    "message": "Salle introuvable",  // Message lisible
+    "details": { ... }               // Contexte additionnel si disponible
+  },
+  "timestamp": "2026-04-01T10:30:00Z"
+}
+
+// Codes HTTP utilisés
+200 OK            — Succès
+201 Created       — Ressource créée
+400 Bad Request   — Données invalides
+401 Unauthorized  — JWT manquant ou expiré
+403 Forbidden     — Droits insuffisants
+404 Not Found     — Ressource inexistante
+409 Conflict      — Conflit (ex: email déjà utilisé)
+422 Unprocessable — Validation métier échouée
+429 Too Many      — Rate limit dépassé
+500 Internal      — Erreur serveur (loggée Sentry)
+
+11.2  Headers requis sur toutes les routes protégées
+Authorization: Bearer eyJhbGci...   // JWT access token
+Content-Type: application/json
+X-Client-Version: 1.2.3             // Version app (mobile/desktop)
+X-Platform: android|ios|web|desktop // Plateforme client
+
+11.3  Versioning API
+Toutes les routes sont préfixées /v1/. Lors de changements breaking, /v2/ sera introduit avec période de support parallèle de 6 mois. Les applications mobiles et desktop doivent inclure le header X-Client-Version pour permettre la détection de versions obsolètes et le blocage des versions expirées (> 90 jours).
+
+
+CST-HERALDO-001 — Version 1.0 — Avril 2026
+HÉRALDO — "Votre message, notre mission." — Document Technique Confidentiel
+
