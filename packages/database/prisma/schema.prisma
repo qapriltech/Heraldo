@@ -909,14 +909,14 @@ model SocialAccount {
   createdAt             DateTime            @default(now()) @map("created_at")
   updatedAt             DateTime            @updatedAt @map("updated_at")
 
-  postPlatforms SocialPostPlatform[]
+  publicationPlatforms SocialPublicationPlatform[]
 
   @@unique([clientId, platform, platformAccountId])
   @@index([clientId, status])
   @@map("social_accounts")
 }
 
-model SocialPost {
+model SocialPublication {
   id                  String           @id @default(uuid())
   clientId            String           @map("client_id")
   createdByUserId     String           @map("created_by_user_id")
@@ -937,29 +937,29 @@ model SocialPost {
   createdAt           DateTime         @default(now()) @map("created_at")
   updatedAt           DateTime         @updatedAt @map("updated_at")
 
-  platforms SocialPostPlatform[]
+  platforms SocialPublicationPlatform[]
 
   @@index([clientId, status, scheduledAt])
   @@index([clientId, publishedAt])
-  @@map("social_posts_v2") // v2 to avoid conflict with existing social_posts
+  @@map("social_publications")
 }
 
-model SocialPostPlatform {
-  id              String         @id @default(uuid())
-  socialPostId    String         @map("social_post_id")
-  socialAccountId String         @map("social_account_id")
+model SocialPublicationPlatform {
+  id              String            @id @default(uuid())
+  publicationId   String            @map("publication_id")
+  socialAccountId String            @map("social_account_id")
   platform        SocialPlatform
-  externalPostId  String?        @map("external_post_id")
-  externalPostUrl String?        @map("external_post_url")
-  status          String         @default("pending") // pending | published | failed
-  errorMessage    String?        @map("error_message")
-  publishedAt     DateTime?      @map("published_at")
-  contentAdapted  String?        @map("content_adapted")
+  externalPostId  String?           @map("external_post_id")
+  externalPostUrl String?           @map("external_post_url")
+  status          String            @default("pending") // pending | published | failed
+  errorMessage    String?           @map("error_message")
+  publishedAt     DateTime?         @map("published_at")
+  contentAdapted  String?           @map("content_adapted")
 
-  socialPost    SocialPost    @relation(fields: [socialPostId], references: [id], onDelete: Cascade)
-  socialAccount SocialAccount @relation(fields: [socialAccountId], references: [id])
+  publication   SocialPublication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  socialAccount SocialAccount     @relation(fields: [socialAccountId], references: [id])
 
-  @@map("social_post_platforms")
+  @@map("social_publication_platforms")
 }
 
 // ============================================================

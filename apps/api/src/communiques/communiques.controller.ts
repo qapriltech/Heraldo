@@ -9,6 +9,8 @@ import {
   Query,
   Req,
   UseGuards,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { CommuniquesService } from './communiques.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -20,14 +22,20 @@ export class CommuniquesController {
   constructor(private readonly service: CommuniquesService) {}
 
   @Post()
-  @Roles('INSTITUTION', 'ADMIN')
+  @Roles('INSTITUTION', 'AGENCY', 'ADMIN')
   create(@Req() req: any, @Body() body: any) {
-    return this.service.create(req.user.id, body);
+    return this.service.create(req.user.id, {
+      title: body.title,
+      chapeau: body.chapeau,
+      bodyContent: body.bodyContent,
+      contactPresse: body.contactPresse,
+      institutionId: body.institutionId,
+    });
   }
 
   @Get()
   findAll(@Req() req: any, @Query() query: any) {
-    return this.service.findAll(req.user.institutionId, query);
+    return this.service.findAll(req.user.id, query);
   }
 
   @Get(':id')
@@ -36,21 +44,16 @@ export class CommuniquesController {
   }
 
   @Put(':id')
-  @Roles('INSTITUTION', 'ADMIN')
+  @Roles('INSTITUTION', 'AGENCY', 'ADMIN')
   update(@Param('id') id: string, @Body() body: any) {
     return this.service.update(id, body);
   }
 
   @Delete(':id')
-  @Roles('INSTITUTION', 'ADMIN')
+  @Roles('INSTITUTION', 'AGENCY', 'ADMIN')
+  @HttpCode(HttpStatus.OK)
   delete(@Param('id') id: string) {
     return this.service.delete(id);
-  }
-
-  @Post(':id/generate')
-  @Roles('INSTITUTION', 'ADMIN')
-  generateFormat(@Param('id') id: string, @Body('format') format: 'pdf' | 'html' | 'txt') {
-    return this.service.generateFormat(id, format);
   }
 
   @Get(':id/hash')
@@ -59,9 +62,12 @@ export class CommuniquesController {
   }
 
   @Post(':id/diffuse')
-  @Roles('INSTITUTION', 'ADMIN')
-  diffuse(@Param('id') id: string, @Body('channels') channels: string[]) {
-    return this.service.diffuse(id, channels);
+  @Roles('INSTITUTION', 'AGENCY', 'ADMIN')
+  diffuse(@Param('id') id: string, @Body() body: any) {
+    return this.service.diffuse(id, {
+      journalistIds: body.journalistIds,
+      channels: body.channels,
+    });
   }
 
   @Get(':id/diffusion-status')
