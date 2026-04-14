@@ -185,49 +185,56 @@ export class AuthService {
   }
 
   /**
-   * Envoi email OTP via Mailgun/SMTP
+   * Envoi email OTP via Brevo (ex-Sendinblue)
    */
   private async sendOtpEmail(email: string, code: string, name: string) {
-    const mailgunKey = this.configService.get<string>('MAILGUN_API_KEY');
-    const mailgunDomain = this.configService.get<string>('MAILGUN_DOMAIN');
+    const brevoKey = this.configService.get<string>('BREVO_API_KEY');
+    const fromEmail = this.configService.get<string>('BREVO_FROM_EMAIL', 'noreply@heraldo-press.com');
+    const fromName = this.configService.get<string>('BREVO_FROM_NAME', 'HERALDO');
 
-    if (mailgunKey && mailgunDomain) {
-      try {
-        const formData = new URLSearchParams();
-        formData.append('from', `HERALDO <noreply@${mailgunDomain}>`);
-        formData.append('to', email);
-        formData.append('subject', `${code} — Votre code de connexion HERALDO`);
-        formData.append('html', `
-          <div style="font-family: 'DM Sans', Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 40px 24px;">
-            <div style="text-align: center; margin-bottom: 32px;">
-              <div style="display: inline-block; background: linear-gradient(135deg, #C8A45C, #D4B876); padding: 12px 16px; border-radius: 12px;">
-                <span style="color: #0D1B3E; font-size: 20px; font-weight: 800; letter-spacing: 1px;">HERALDO</span>
-              </div>
-            </div>
-            <h2 style="color: #0D1B3E; font-size: 22px; font-weight: 700; margin-bottom: 8px;">Bonjour ${name},</h2>
-            <p style="color: #8A8278; font-size: 15px; line-height: 1.6; margin-bottom: 24px;">Voici votre code de connexion HERALDO. Il est valable 10 minutes.</p>
-            <div style="background: #F5F3EF; border-radius: 16px; padding: 24px; text-align: center; margin-bottom: 24px;">
-              <span style="font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #0D1B3E;">${code}</span>
-            </div>
-            <p style="color: #B5AEA4; font-size: 13px; text-align: center;">Si vous n'avez pas demandé ce code, ignorez cet email.</p>
-            <hr style="border: none; border-top: 1px solid #EDE8DF; margin: 24px 0;" />
-            <p style="color: #B5AEA4; font-size: 11px; text-align: center;">HERALDO — Votre message, notre mission.<br/>Abidjan, Côte d'Ivoire</p>
+    const htmlContent = `
+      <div style="font-family: 'DM Sans', Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 40px 24px; background: #FAF8F4;">
+        <div style="text-align: center; margin-bottom: 32px;">
+          <div style="display: inline-block; background: linear-gradient(135deg, #C8A45C, #D4B876); padding: 12px 16px; border-radius: 12px;">
+            <span style="color: #0D1B3E; font-size: 20px; font-weight: 800; letter-spacing: 1px;">HERALDO</span>
           </div>
-        `);
+        </div>
+        <h2 style="color: #0D1B3E; font-size: 22px; font-weight: 700; margin-bottom: 8px;">Bonjour ${name},</h2>
+        <p style="color: #8A8278; font-size: 15px; line-height: 1.6; margin-bottom: 24px;">Voici votre code de connexion HERALDO. Il est valable 10 minutes.</p>
+        <div style="background: white; border: 2px solid #C8A45C; border-radius: 16px; padding: 28px; text-align: center; margin-bottom: 24px;">
+          <span style="font-size: 38px; font-weight: 800; letter-spacing: 10px; color: #0D1B3E; font-family: monospace;">${code}</span>
+        </div>
+        <p style="color: #B5AEA4; font-size: 13px; text-align: center;">Si vous n'avez pas demandé ce code, ignorez cet email en toute sécurité.</p>
+        <hr style="border: none; border-top: 1px solid #EDE8DF; margin: 24px 0;" />
+        <p style="color: #B5AEA4; font-size: 11px; text-align: center;">HERALDO — Votre message, notre mission.<br/>Abidjan, Côte d'Ivoire</p>
+      </div>
+    `;
 
-        await fetch(`https://api.mailgun.net/v3/${mailgunDomain}/messages`, {
+    if (brevoKey) {
+      try {
+        const res = await fetch('https://api.brevo.com/v3/smtp/email', {
           method: 'POST',
           headers: {
-            Authorization: 'Basic ' + Buffer.from(`api:${mailgunKey}`).toString('base64'),
-            'Content-Type': 'application/x-www-form-urlencoded',
+            'accept': 'application/json',
+            'api-key': brevoKey,
+            'content-type': 'application/json',
           },
-          body: formData.toString(),
+          body: JSON.stringify({
+            sender: { name: fromName, email: fromEmail },
+            to: [{ email, name }],
+            subject: `${code} — Votre code de connexion HERALDO`,
+            htmlContent,
+          }),
         });
 
-        console.log(`[AUTH] OTP email sent to ${email}`);
+        if (res.ok) {
+          console.log(`[AUTH] OTP email sent via Brevo to ${email}`);
+        } else {
+          const errBody = await res.text();
+          console.error(`[AUTH] Brevo error ${res.status}: ${errBody}`);
+        }
       } catch (err) {
-        console.error('[AUTH] Mailgun error (non-blocking):', err);
-        // Ne pas bloquer la connexion si l'email échoue
+        console.error('[AUTH] Brevo error (non-blocking):', err);
       }
     } else {
       // Mode dev — afficher dans la console
