@@ -33,20 +33,15 @@ import { api } from "@/lib/api";
 
 type PreviewTab = "presse" | "web" | "social";
 
-const mediaTypes = [
-  { id: "presse_ecrite", label: "Presse ecrite", count: 245 },
-  { id: "radio", label: "Radio", count: 89 },
-  { id: "television", label: "Television", count: 67 },
-  { id: "presse_en_ligne", label: "Presse en ligne", count: 312 },
-  { id: "agences", label: "Agences de presse", count: 34 },
-];
+interface Journalist {
+  id: string;
+  user: { fullName: string; avatarUrl?: string };
+  mediaOrganization?: { name: string; type: string };
+  specialties: string[];
+  tier: string;
+}
 
 const regions = ["Abidjan", "Bouake", "Yamoussoukro", "San Pedro", "Korhogo", "National", "International"];
-
-function getToken() {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem("heraldo_access_token");
-}
 
 function getUser() {
   if (typeof window === "undefined") return null;
@@ -60,16 +55,40 @@ export default function NewCommuniquePage() {
   const [content, setContent] = useState("");
   const [contactPresse, setContactPresse] = useState("");
   const [previewTab, setPreviewTab] = useState<PreviewTab>("presse");
-  const [selectedMedia, setSelectedMedia] = useState<string[]>([]);
   const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
   const [dragActive, setDragActive] = useState(false);
   const [saving, setSaving] = useState(false);
   const [diffusing, setDiffusing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<{ id: string; hash?: string } | null>(null);
+  // RÉSEAU — sélection journalistes
+  const [journalists, setJournalists] = useState<Journalist[]>([]);
+  const [selectedJournalists, setSelectedJournalists] = useState<string[]>([]);
+  const [journalistSearch, setJournalistSearch] = useState("");
+  const [loadingJournalists, setLoadingJournalists] = useState(false);
+  const [journalistsLoaded, setJournalistsLoaded] = useState(false);
 
-  const toggleMedia = (id: string) =>
-    setSelectedMedia(prev => prev.includes(id) ? prev.filter(m => m !== id) : [...prev, id]);
+  // Charger les journalistes depuis l'API RÉSEAU
+  const loadJournalists = async (search?: string) => {
+    setLoadingJournalists(true);
+    try {
+      const params = new URLSearchParams({ limit: "50" });
+      if (search) params.set("search", search);
+      const res = await api.get<{ data: Journalist[]; meta: any }>(`/reseau/journalists?${params}`);
+      setJournalists(res.data);
+      setJournalistsLoaded(true);
+    } catch { /* silencieux */ }
+    finally { setLoadingJournalists(false); }
+  };
+
+  // Charger au premier rendu
+  if (typeof window !== "undefined" && !journalistsLoaded && !loadingJournalists) {
+    loadJournalists();
+  }
+
+  const toggleJournalist = (id: string) =>
+    setSelectedJournalists(prev => prev.includes(id) ? prev.filter(j => j !== id) : [...prev, id]);
+
   const toggleRegion = (r: string) =>
     setSelectedRegions(prev => prev.includes(r) ? prev.filter(x => x !== r) : [...prev, r]);
 
@@ -81,15 +100,14 @@ export default function NewCommuniquePage() {
     if (!title || !content) { setError("Le titre et le contenu sont obligatoires"); return; }
     setSaving(true); setError(null);
     try {
-      const token = getToken();
       const user = getUser();
       const res = await api.post<any>("/communiques", {
         title, chapeau, bodyContent: content, contactPresse,
-        institutionId: user?.institution?.id || user?.id,
-      }, { token: token || undefined });
+        ...(user?.institution?.id ? { institutionId: user.institution.id } : {}),
+      });
       setSuccess({ id: res.id });
     } catch (err: any) {
-      setError(err?.data?.message || err.message || "Erreur lors de la sauvegarde");
+      setError(err.message || "Erreur lors de la sauvegarde");
     } finally { setSaving(false); }
   };
 
@@ -98,26 +116,25 @@ export default function NewCommuniquePage() {
     if (!isValid) { setError("Titre, chapeau et contenu sont obligatoires (RG-EMI-02)"); return; }
     setDiffusing(true); setError(null);
     try {
-      const token = getToken();
       const user = getUser();
       // Créer le communiqué
       const cp = await api.post<any>("/communiques", {
         title, chapeau, bodyContent: content, contactPresse,
-        institutionId: user?.institution?.id || user?.id,
-      }, { token: token || undefined });
+        ...(user?.institution?.id ? { institutionId: user.institution.id } : {}),
+      });
 
-      // Diffuser
-      const diff = await api.post<any>(`/communiques/${cp.id}/diffuse`, {
+      // Diffuser aux journalistes sélectionnés
+      await api.post<any>(`/communiques/${cp.id}/diffuse`, {
         channels: ["EMAIL", "WHATSAPP"],
-        journalistIds: [],
-      }, { token: token || undefined });
+        journalistIds: selectedJournalists,
+      });
 
       // Récupérer le hash
-      const hash = await api.get<any>(`/communiques/${cp.id}/hash`, { token: token || undefined });
+      const hash = await api.get<any>(`/communiques/${cp.id}/hash`);
 
       setSuccess({ id: cp.id, hash: hash.sha256Hash });
     } catch (err: any) {
-      setError(err?.data?.message || err.message || "Erreur lors de la diffusion");
+      setError(err.message || "Erreur lors de la diffusion");
     } finally { setDiffusing(false); }
   };
 
@@ -314,26 +331,55 @@ export default function NewCommuniquePage() {
 
           {/* Right sidebar */}
           <div className="space-y-6">
-            {/* Media targeting */}
+            {/* Sélecteur de journalistes — RÉSEAU */}
             <Card hover={false}>
               <h2 className="text-sm font-semibold text-navy mb-4 flex items-center gap-2">
                 <Target className="w-4 h-4 text-gold" />
-                Ciblage media
+                Journalistes cibles
               </h2>
-              <div className="space-y-2">
-                {mediaTypes.map(media => (
-                  <label key={media.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-ivory transition-colors cursor-pointer">
-                    <input type="checkbox" checked={selectedMedia.includes(media.id)} onChange={() => toggleMedia(media.id)} className="w-4 h-4 rounded accent-gold" />
-                    <span className="flex-1 text-sm font-medium text-navy">{media.label}</span>
-                    <span className="text-xs text-warm-gray bg-ivory px-2 py-1 rounded-md">{media.count}</span>
-                  </label>
-                ))}
+              <div className="relative mb-3">
+                <input
+                  type="text"
+                  placeholder="Rechercher un journaliste ou media..."
+                  value={journalistSearch}
+                  onChange={e => { setJournalistSearch(e.target.value); loadJournalists(e.target.value); }}
+                  className="w-full pl-3 pr-3 py-2.5 rounded-xl border border-gray-200 bg-white text-sm"
+                />
               </div>
-              <div className="mt-3 pt-3 border-t border-gray-100">
+              <div className="max-h-64 overflow-y-auto space-y-1">
+                {loadingJournalists && !journalistsLoaded ? (
+                  <div className="text-center py-4">
+                    <Loader2 className="w-5 h-5 text-gold animate-spin mx-auto" />
+                  </div>
+                ) : journalists.length === 0 ? (
+                  <p className="text-xs text-warm-gray text-center py-4">Aucun journaliste trouve</p>
+                ) : (
+                  journalists.map(j => {
+                    const selected = selectedJournalists.includes(j.id);
+                    return (
+                      <label key={j.id} className={`flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-all ${selected ? "bg-gold/10 ring-1 ring-gold/30" : "hover:bg-ivory"}`}>
+                        <input type="checkbox" checked={selected} onChange={() => toggleJournalist(j.id)} className="w-4 h-4 rounded accent-gold shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-navy truncate">{j.user.fullName}</p>
+                          <p className="text-[10px] text-warm-gray truncate">{j.mediaOrganization?.name || "Independant"} — {j.specialties.join(", ")}</p>
+                        </div>
+                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${j.tier === "tier1" ? "bg-gold/20 text-gold-dark" : j.tier === "tier2" ? "bg-navy/10 text-navy" : "bg-ivory text-warm-gray"}`}>
+                          {j.tier === "tier1" ? "TOP" : j.tier === "tier2" ? "STD" : "LOC"}
+                        </span>
+                      </label>
+                    );
+                  })
+                )}
+              </div>
+              <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
                 <p className="text-xs text-warm-gray">
-                  <Globe className="w-3 h-3 inline mr-1" />
-                  {selectedMedia.length === 0 ? "Selectionnez les medias cibles" : `${selectedMedia.length} type(s) — ~${selectedMedia.reduce((s, id) => s + (mediaTypes.find(m => m.id === id)?.count || 0), 0)} journalistes`}
+                  {selectedJournalists.length === 0 ? "Selectionnez les destinataires" : `${selectedJournalists.length} journaliste(s) selectionne(s)`}
                 </p>
+                {journalists.length > 0 && (
+                  <button onClick={() => setSelectedJournalists(selectedJournalists.length === journalists.length ? [] : journalists.map(j => j.id))} className="text-[10px] font-bold text-gold cursor-pointer">
+                    {selectedJournalists.length === journalists.length ? "Deselectionner tout" : "Tout selectionner"}
+                  </button>
+                )}
               </div>
             </Card>
 
@@ -369,8 +415,8 @@ export default function NewCommuniquePage() {
                   <span className={`font-medium ${wordCount >= 150 ? "text-green-light" : "text-orange"}`}>{wordCount} mots</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Medias cibles</span>
-                  <span className="text-white font-medium">{selectedMedia.length || "—"}</span>
+                  <span className="text-gray-400">Journalistes</span>
+                  <span className={`font-medium ${selectedJournalists.length > 0 ? "text-green-light" : "text-warm-gray"}`}>{selectedJournalists.length || "—"}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400">Zones</span>

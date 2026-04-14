@@ -21,9 +21,35 @@ export class CommuniquesService {
       throw new BadRequestException('Le titre et le corps du communiqué sont obligatoires');
     }
 
+    // Résoudre l'institution — auto-créer si nécessaire
+    let institutionId = data.institutionId;
+    if (!institutionId || institutionId === 'undefined' || institutionId === 'null') {
+      // Chercher une institution existante pour cet utilisateur
+      const existingLink = await this.prisma.institutionUser.findFirst({
+        where: { userId },
+        select: { institutionId: true },
+      });
+      if (existingLink) {
+        institutionId = existingLink.institutionId;
+      } else {
+        // Auto-créer une institution pour cet utilisateur
+        const user = await this.prisma.user.findUnique({ where: { id: userId } });
+        const inst = await this.prisma.institution.create({
+          data: {
+            name: user?.fullName || 'Mon institution',
+            type: 'INSTITUTION',
+          },
+        });
+        await this.prisma.institutionUser.create({
+          data: { institutionId: inst.id, userId, role: 'OWNER' },
+        });
+        institutionId = inst.id;
+      }
+    }
+
     const communique = await this.prisma.communique.create({
       data: {
-        institutionId: data.institutionId,
+        institutionId,
         title: data.title,
         chapeau: data.chapeau || null,
         bodyContent: data.bodyContent,

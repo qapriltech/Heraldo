@@ -7,13 +7,20 @@ interface RequestOptions extends Omit<RequestInit, "body"> {
 }
 
 class ApiError extends Error {
-  constructor(
-    public status: number,
-    public data: unknown,
-  ) {
-    super(`API Error ${status}`);
+  status: number;
+  data: any;
+  constructor(status: number, data: any) {
+    const msg = data?.message || data?.error || `Erreur API ${status}`;
+    super(typeof msg === "string" ? msg : JSON.stringify(msg));
     this.name = "ApiError";
+    this.status = status;
+    this.data = data;
   }
+}
+
+function getStoredToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("heraldo_access_token");
 }
 
 async function request<T = unknown>(
@@ -22,23 +29,31 @@ async function request<T = unknown>(
 ): Promise<T> {
   const { body, token, headers: extraHeaders, ...rest } = options;
 
+  // Auto-attach token from localStorage if not provided
+  const authToken = token ?? getStoredToken();
+
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(extraHeaders as Record<string, string>),
   };
 
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
+  if (authToken) {
+    headers["Authorization"] = `Bearer ${authToken}`;
   }
 
-  const res = await fetch(`${BASE_URL}${path}`, {
-    ...rest,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${BASE_URL}${path}`, {
+      ...rest,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch (networkErr) {
+    throw new ApiError(0, { message: "Impossible de joindre le serveur HERALDO" });
+  }
 
   if (!res.ok) {
-    const data = await res.json().catch(() => null);
+    const data = await res.json().catch(() => ({ message: `Erreur ${res.status}` }));
     throw new ApiError(res.status, data);
   }
 
