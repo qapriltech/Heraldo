@@ -1,0 +1,1161 @@
+
+
+
+
+CDC TECHNIQUE — EXTENSION DU CDC-HERALDO-001
+Module ADMIN HERALDO PRESS
+Gestion interne intégrée à la plateforme Architecture et articulation avec Odoo
+— • —
+
+
+
+
+
+
+
+
+Réf : HP-CDC-ADMIN-2026-016 Avril 2026  |  Abidjan, Côte d'Ivoire  Document confidentiel — Usage interne et investisseurs
+
+1. PHILOSOPHIE DE L'ARCHITECTURE
+
+HERALDO PRESS fait tourner deux systèmes qui communiquent. Odoo gère tout ce qui est gestion d'entreprise standard (comptabilité, facturation, paie, CRM prospects). La plateforme HERALDO gère tout ce qui est spécifique au métier SaaS de communication institutionnelle (abonnements clients, usage, journalistes accrédités, FCM, reporting métier). Les deux systèmes communiquent par API pour automatiser les flux de bout en bout.
+
+1.1 Règle de séparation claire
+Pour éviter toute confusion entre les équipes et dupliquer des efforts, nous posons une règle simple :
+Question
+Outil
+Où sont stockés les clients et prospects ?
+HubSpot CRM au démarrage, Odoo CRM ensuite
+Où sont émises les factures ?
+Odoo Comptabilité
+Où est tenue la comptabilité SYSCOHADA ?
+Odoo Comptabilité
+Où sont gérés les salaires et la paie ?
+Odoo Paie (ou externalisé cabinet)
+Où sont faites les déclarations fiscales (DGI, CNPS) ?
+Odoo (ou cabinet)
+Où est suivie la rentabilité par ligne métier ?
+Odoo Comptabilité analytique
+Où est gérée la trésorerie ?
+Odoo Trésorerie + Mobile Money
+
+
+Où sont stockés les abonnements HERALDO des clients ?
+Plateforme HERALDO (module ADMIN)
+Où sont traqués les usages modules par client ?
+Plateforme HERALDO
+Où sont gérées les accréditations journalistes ?
+Plateforme HERALDO
+Où sont enregistrées les transactions FCM ?
+Plateforme HERALDO (puis export vers Odoo)
+Où sont les tickets support HERALDO ?
+Crisp au démarrage, intégré dans HERALDO ensuite
+Où se fait le pilotage métier SaaS (MRR, churn...) ?
+Plateforme HERALDO
+
+1.2 Principe d'intégration
+Les deux systèmes ne se substituent pas l'un à l'autre. Ils se complètent via des flux d'information automatisés qui évitent la double saisie et les erreurs. Le principe directeur : chaque donnée a une seule source de vérité, et les autres systèmes la récupèrent par API.
+Exemples concrets de flux automatisés :
+Une institution cliente souscrit à HERALDO MAIRIE → HERALDO déclenche la création d'un client dans Odoo + émission de la facture + envoi email avec lien de paiement.
+Un paiement FCM est effectué à un journaliste → HERALDO enregistre la transaction + génère une ligne de commission (15%) → exporte quotidiennement vers Odoo en revenu variable.
+Un salarié est recruté → Odoo gère le contrat, les bulletins de paie, les congés. HERALDO gère uniquement son accès à la plateforme selon son rôle.
+Un impayé est détecté dans Odoo → API notifie HERALDO qui restreint automatiquement les accès après 30 jours.
+
+2. LES MODULES ADMIN À CONSTRUIRE DANS HERALDO
+
+2.1 Vue d'ensemble
+Code
+Module
+Priorité
+Complexité
+A1
+ABONNEMENTS — Cycle de vie des abonnements clients
+P0
+Moyenne
+A2
+USAGE — Tracking et analyse d'utilisation par client
+P0
+Moyenne
+A3
+ACCRÉDITATIONS — Gestion des journalistes accrédités
+P0
+Moyenne
+A4
+FCM-ADMIN — Administration des transactions FCM
+P0
+Élevée
+A5
+DASHBOARD — Pilotage métier SaaS
+P0
+Moyenne
+A6
+SUPPORT — Helpdesk intégré
+P1
+Moyenne
+A7
+ALERTES — Système d'alertes opérationnelles
+P1
+Faible
+A8
+ODOO-SYNC — Connecteur bidirectionnel Odoo
+P0
+Élevée
+
+
+3. MODULE A1 — ABONNEMENTS (CYCLE DE VIE DES ABONNEMENTS CLIENTS)
+
+3.1 Objectif fonctionnel
+Gérer l'intégralité du cycle de vie d'un abonnement HERALDO PRESS : souscription, activation, renouvellement, upgrade, downgrade, suspension, résiliation. C'est le cœur opérationnel de votre modèle SaaS. Chaque abonnement déclenche automatiquement les actions correspondantes dans Odoo (facturation) et dans la plateforme HERALDO (provisioning des accès).
+3.2 Schéma de base de données
+Table subscriptions
+Champ
+Type
+Description
+id
+UUID PK
+
+client_id
+UUID FK users.id
+Institution souscripteur
+formula
+ENUM
+heraldo_elu | heraldo_mairie | heraldo_institution | heraldo_agence | heraldo_plus_variants
+status
+ENUM
+pending_activation | active | suspended | cancelled | expired | renewing
+start_date
+DATE
+Date d'activation effective
+end_date
+DATE
+Date de fin de période payée
+auto_renewal
+BOOLEAN DEFAULT true
+Renouvellement automatique activé
+renewal_notice_sent_at
+TIMESTAMP NULL
+Date d'envoi du préavis de renouvellement
+annual_price_fcfa
+BIGINT
+Prix annuel contractuel en FCFA
+discount_applied_pct
+DECIMAL(5,2) DEFAULT 0
+Remise éventuelle
+discount_reason
+VARCHAR(500) NULL
+Motif commercial de la remise
+odoo_invoice_id
+VARCHAR(100) NULL
+ID facture Odoo correspondante
+payment_status
+ENUM DEFAULT 'pending'
+pending | paid | overdue | partial
+payment_received_at
+TIMESTAMP NULL
+
+payment_method
+ENUM NULL
+bank_transfer | mobile_money | check | cash
+suspended_at
+TIMESTAMP NULL
+
+suspension_reason
+VARCHAR(500) NULL
+
+cancelled_at
+TIMESTAMP NULL
+
+cancellation_reason
+VARCHAR(500) NULL
+
+cancelled_by
+UUID FK users.id NULL
+User HERALDO ayant validé résiliation
+notes
+TEXT NULL
+Notes internes Customer Success
+created_at
+TIMESTAMP
+
+updated_at
+TIMESTAMP
+
+
+Index : INDEX (client_id, status), INDEX (status, end_date), INDEX (odoo_invoice_id)
+Table subscription_history — Historique des changements d'état
+Champ
+Type
+Description
+id
+UUID PK
+
+subscription_id
+UUID FK subscriptions.id
+
+event_type
+ENUM
+created | activated | renewed | upgraded | downgraded | suspended | reactivated | cancelled | expired
+from_status
+ENUM NULL
+État précédent
+to_status
+ENUM
+Nouvel état
+from_formula
+ENUM NULL
+
+to_formula
+ENUM
+
+triggered_by
+UUID FK users.id NULL
+User HERALDO (admin) ou null (auto)
+details
+JSONB
+Données contextuelles (prix, motif, etc.)
+occurred_at
+TIMESTAMP
+
+
+3.3 États et transitions
+Machine à états des abonnements — transitions autorisées :
+De l'état
+Vers l'état
+Événement déclencheur
+—
+pending_activation
+Souscription créée, en attente du paiement
+pending_activation
+active
+Paiement confirmé (automatique)
+pending_activation
+cancelled
+Délai de paiement dépassé (30 jours)
+active
+renewing
+Préavis de renouvellement envoyé (J-60 avant end_date)
+renewing
+active
+Renouvellement payé
+renewing
+expired
+Renouvellement refusé ou non payé
+active
+suspended
+Impayé constaté (via webhook Odoo)
+suspended
+active
+Régularisation du paiement
+suspended
+cancelled
+Après 60 jours de suspension sans régularisation
+active
+cancelled
+Résiliation à la demande du client
+active
+upgraded/downgraded
+Changement de formule en cours
+
+3.4 Endpoints API — Préfixe /v1/admin/subscriptions
+Endpoint
+Description
+POST /v1/admin/subscriptions
+Crée un abonnement (commercial signe le client)
+GET /v1/admin/subscriptions
+Liste avec filtres : status, formula, payment_status, date_from/to
+GET /v1/admin/subscriptions/{id}
+Détail complet + history
+PATCH /v1/admin/subscriptions/{id}
+Modifie (prix, dates, notes)
+POST /v1/admin/subscriptions/{id}/activate
+Activation manuelle (paiement reçu en espèces par ex.)
+POST /v1/admin/subscriptions/{id}/suspend
+Suspension pour impayé
+POST /v1/admin/subscriptions/{id}/reactivate
+Réactivation après régularisation
+POST /v1/admin/subscriptions/{id}/cancel
+Résiliation
+POST /v1/admin/subscriptions/{id}/upgrade
+Changement de formule supérieure
+POST /v1/admin/subscriptions/{id}/renew
+Déclenchement manuel de renouvellement
+GET /v1/admin/subscriptions/expiring
+Abonnements expirant dans les 60 jours
+GET /v1/admin/subscriptions/overdue
+Abonnements en impayé
+
+3.5 Workers automatisés
+Worker 1 — Préavis de renouvellement (tous les jours à 8h)
+Sélectionner les abonnements active dont end_date est entre J+55 et J+65.
+Marquer status = renewing.
+Générer la facture de renouvellement dans Odoo via API.
+Envoyer email au client avec lien vers espace de paiement + PDF facture.
+Notifier le Customer Success assigné pour suivi.
+Worker 2 — Détection d'impayés (tous les jours à 10h)
+Interroger Odoo via API pour lister les factures overdue (> 30 jours).
+Croiser avec les abonnements HERALDO actifs.
+Pour chaque match : passer subscription à status = suspended, envoyer email au client.
+Restreindre les accès plateforme automatiquement (lecture seule).
+Worker 3 — Expiration automatique (tous les jours à 2h)
+Sélectionner les abonnements renewing dont end_date est dépassée de 7 jours sans paiement.
+Passer à status = expired.
+Désactiver tous les accès plateforme.
+Notifier Customer Success pour appel de fin de relation.
+
+4. MODULE A2 — USAGE (TRACKING ET ANALYSE D'UTILISATION)
+
+4.1 Objectif fonctionnel
+Capturer en temps réel l'activité de chaque client HERALDO sur la plateforme pour détecter les sous-utilisations (signal de désabonnement à venir) et les sur-utilisations (opportunité d'upsell vers une formule supérieure). Ce module est le cerveau de votre Customer Success.
+4.2 Événements trackés
+Liste des événements à capturer systématiquement :
+Module
+Événements trackés
+Authentification
+Login, logout, session_duration
+ÉMISSION
+Communiqué créé, communiqué envoyé, communiqué duplique, destinataires
+AGORA
+Salle créée, salle démarrée, participants max, durée, preuves validées
+RÉSEAU
+Journalistes recherchés, filtres utilisés, invitations envoyées
+FCM
+Fonds alimenté, fonds configuré, preuves validées, paiements effectués
+AMPLIFICATION
+Campagnes créées, posts planifiés, volume
+IMPACT
+Rapports consultés, exports effectués
+SOCIAL (Cockpit)
+Comptes connectés, posts publiés, échecs publication
+STUDIO (Cockpit)
+Visuels générés, templates utilisés
+INBOX (Cockpit)
+Messages reçus, messages traités
+BRIEF (Cockpit)
+Briefs créés, briefs exportés
+CRM (Cockpit)
+Journalistes consultés, notes ajoutées
+
+4.3 Architecture de tracking
+Table usage_events (partitionnée mensuellement)
+Volume attendu : ~100-500 événements/client/mois. Partitionnement mensuel pour performance.
+Champ
+Type
+Description
+id
+UUID PK
+
+client_id
+UUID FK users.id
+
+user_id
+UUID FK users.id
+User précis au sein du client
+event_name
+VARCHAR(100)
+Ex: 'agora.room.created'
+event_category
+VARCHAR(50)
+emission | agora | reseau | fcm...
+event_data
+JSONB
+Données structurées de l'événement
+session_id
+UUID
+Pour grouper événements d'une même session
+user_agent
+VARCHAR(500)
+
+ip_address
+INET
+
+occurred_at
+TIMESTAMP
+
+
+Vues matérialisées pour les agrégations
+Rafraîchies chaque nuit (00:00) pour accélérer les requêtes de dashboard :
+usage_daily_by_client — Agrégation jour/client/module (compteurs)
+usage_weekly_by_client — Agrégation semaine/client
+usage_monthly_by_client — Agrégation mois/client (pour rapports mensuels)
+usage_cohorts — Cohortes d'activation pour mesure rétention
+4.4 Score de santé client (Health Score)
+Calcul d'un score 0-100 par client, rafraîchi chaque nuit, indicateur principal du Customer Success.
+Formule
+
+health_score = (
+  activity_score (0-40)      // basé sur fréquence d'usage 30 derniers jours
+  + engagement_score (0-25)  // profondeur d'usage : nombre de modules utilisés
+  + adoption_score (0-20)    // % de la formule consommé (ex: 150 comm envoyés sur 200 inclus)
+  + payment_score (0-15)     // ponctualité paiements
+)
+Interprétation
+Score
+Statut
+Action Customer Success
+0–30
+CRITIQUE
+Appel immédiat du CSM dans les 24h
+31–50
+ALERTE
+Contact dans la semaine, plan de réactivation
+51–70
+STANDARD
+Suivi mensuel normal
+71–85
+HEALTHY
+Client satisfait, explorer upsell
+86–100
+CHAMPION
+Demander témoignage, étude de cas, parrainage
+
+4.5 Endpoints API — Préfixe /v1/admin/usage
+Endpoint
+Description
+POST /v1/admin/usage/events
+Enregistre un événement (appelé depuis la plateforme elle-même)
+GET /v1/admin/usage/clients/{id}
+Activité d'un client (tous modules, période)
+GET /v1/admin/usage/clients/{id}/health-score
+Score détaillé + recommandations
+GET /v1/admin/usage/at-risk
+Liste clients à risque (score < 50)
+GET /v1/admin/usage/top-users
+Top clients en volume d'usage
+GET /v1/admin/usage/upsell-opportunities
+Clients dépassant les limites de leur formule (suggestion upgrade)
+GET /v1/admin/usage/cohort-retention
+Matrice de rétention par cohorte mensuelle
+
+
+5. MODULE A3 — ACCRÉDITATIONS (GESTION DES JOURNALISTES)
+
+5.1 Objectif fonctionnel
+Administrer le processus complet d'accréditation des journalistes : réception des demandes, vérification des justificatifs, validation humaine, création des comptes, suivi de l'activation, révocation éventuelle. Référence le Document 15 (Plan d'acquisition) pour la stratégie d'acquisition.
+5.2 Schéma de base de données
+Table accreditation_requests
+Champ
+Type
+Description
+id
+UUID PK
+
+first_name
+VARCHAR(200)
+
+last_name
+VARCHAR(200)
+
+email
+VARCHAR(300)
+
+phone
+VARCHAR(50)
+
+media_outlet_declared
+VARCHAR(300) NULL
+Média déclaré par le demandeur
+media_outlet_id
+UUID FK media_outlets.id NULL
+Si reconnu après validation
+status_type
+ENUM
+salaried | freelance | blogger | other
+specialty
+VARCHAR(100)
+Spécialité principale déclarée
+zone_geo
+VARCHAR(100)
+Zone géographique principale
+press_card_url
+TEXT NULL
+Scan carte CNPCI
+alternative_proof_url
+TEXT NULL
+Contrat, attestation...
+acquisition_channel
+ENUM
+association | field_tour | referral | event | organic
+referrer_journalist_id
+UUID FK journalists.id NULL
+Si parrainé
+status
+ENUM DEFAULT 'pending'
+pending | in_review | approved | rejected | on_hold
+reviewed_by
+UUID FK users.id NULL
+Membre équipe HERALDO ayant traité
+review_notes
+TEXT NULL
+
+rejection_reason
+VARCHAR(500) NULL
+Si rejetée
+submitted_at
+TIMESTAMP
+
+reviewed_at
+TIMESTAMP NULL
+
+journalist_id
+UUID FK journalists.id NULL
+Si approuvée et compte créé
+
+Index : INDEX (status, submitted_at), INDEX (email)
+Table accreditation_revocations
+Champ
+Type
+Description
+id
+UUID PK
+
+journalist_id
+UUID FK journalists.id
+
+reason_category
+ENUM
+fraud | ethics_violation | inactivity | user_request | legal
+reason_detail
+TEXT
+
+evidence_urls
+TEXT[]
+Justificatifs
+decided_by_committee
+BOOLEAN DEFAULT false
+Décision comité ou admin seul
+committee_members_ids
+UUID[]
+Si comité
+revoked_by
+UUID FK users.id
+
+revoked_at
+TIMESTAMP
+
+can_reapply_after
+DATE NULL
+Date de nouvelle candidature possible
+
+5.3 Workflow d'accréditation
+Séquence exhaustive depuis la demande jusqu'à l'activation, avec triggers automatiques :
+Étape 1 — Formulaire public soumis → création accreditation_requests avec status=pending
+Étape 2 — Vérification automatique (email unique, téléphone unique, media croisé avec media_outlets)
+Étape 3 — Notification Customer Success Journalistes → status=in_review
+Étape 4 — Validation humaine (CSM consulte les justificatifs, éventuellement appelle le Directeur de Publication)
+Étape 5a — Approuvé → création journalist + génération slug + email de bienvenue avec lien d'activation → status=approved
+Étape 5b — Rejeté → email avec motif → status=rejected
+Étape 5c — On hold → demande de compléments au candidat → status=on_hold
+Étape 6 — Journaliste active son compte → premier onboarding 5 écrans → attribution invitation AGORA test (rétention J+14)
+5.4 Endpoints API — Préfixe /v1/admin/accreditations
+Endpoint
+Description
+POST /v1/public/accreditation-requests
+Endpoint public de soumission (rate-limited)
+GET /v1/admin/accreditations/requests
+Liste demandes avec filtres (status, channel, date)
+GET /v1/admin/accreditations/requests/{id}
+Détail avec justificatifs
+POST /v1/admin/accreditations/requests/{id}/approve
+Approuve et crée le compte journaliste
+POST /v1/admin/accreditations/requests/{id}/reject
+Rejette avec motif
+POST /v1/admin/accreditations/requests/{id}/hold
+Met en attente et demande compléments
+POST /v1/admin/accreditations/{journalist_id}/revoke
+Révoque une accréditation
+GET /v1/admin/accreditations/stats
+Statistiques acquisition : par canal, par mois, taux conversion
+
+
+6. MODULE A4 — FCM-ADMIN (ADMINISTRATION FCM)
+
+6.1 Objectif fonctionnel
+Superviser l'intégralité des flux financiers FCM depuis l'administration HERALDO : alimentations de fonds par les clients, configurations d'événements, validations de preuves, déclenchements de paiements Mobile Money, suivi des commissions HERALDO. Ce module est critique car il manipule des transactions financières réelles et doit être totalement auditable.
+6.2 Architecture du flux FCM
+Rappel des flux financiers FCM (vue administration) :
+Flux 1 — Client alimente son portefeuille FCM (paiement entrant via Mobile Money ou virement)
+Flux 2 — Client configure un événement FCM (montant par preuve, nombre max de preuves, conditions)
+Flux 3 — Journaliste soumet une preuve → attend validation
+Flux 4 — Preuve validée par le client ou HERALDO → déclenchement paiement Mobile Money au journaliste
+Flux 5 — HERALDO prélève sa commission 15% automatiquement → comptabilisée dans Odoo
+6.3 Tables critiques à administrer
+La plateforme HERALDO maintient déjà des tables fcm_* définies dans CDC-HERALDO-001. Le module A4 ajoute des **vues et endpoints d'administration** pour l'équipe HERALDO :
+Vue administrative
+Fonction
+Tableau fonds clients
+Soldes, alimentations, consommations par client
+Tableau événements en cours
+Toutes les campagnes FCM actives, volume invitations, taux acceptation
+Tableau preuves en attente
+Preuves soumises depuis > 24h sans décision, à relancer ou arbitrer
+Tableau paiements du jour
+Paiements Mobile Money exécutés, réussis, échoués, en retry
+Tableau commissions
+Commissions HERALDO perçues, cumulées par période, à exporter Odoo
+Tableau contestations
+Preuves rejetées avec contestation du journaliste
+
+6.4 Endpoints API — Préfixe /v1/admin/fcm
+Endpoint
+Description
+GET /v1/admin/fcm/wallets
+Liste des portefeuilles clients + soldes
+GET /v1/admin/fcm/wallets/{client_id}/history
+Historique d'un portefeuille
+GET /v1/admin/fcm/events/active
+Événements FCM en cours
+GET /v1/admin/fcm/proofs/pending
+Preuves en attente de décision
+POST /v1/admin/fcm/proofs/{id}/arbitrate
+Arbitrage HERALDO en cas de conflit client/journaliste
+GET /v1/admin/fcm/payments/today
+Paiements du jour
+POST /v1/admin/fcm/payments/{id}/retry
+Relance manuelle d'un paiement échoué
+GET /v1/admin/fcm/payments/failed
+Paiements échoués à traiter
+GET /v1/admin/fcm/commissions
+Commissions HERALDO (filtres : période)
+POST /v1/admin/fcm/commissions/export-odoo
+Export commissions vers Odoo (manuel ou auto quotidien)
+GET /v1/admin/fcm/disputes
+Contestations ouvertes
+POST /v1/admin/fcm/disputes/{id}/resolve
+Résolution d'une contestation
+
+6.5 Règles de gestion FCM-ADMIN
+RG-FCM-ADMIN-01 : Toute action admin sur FCM (arbitrage, retry paiement, résolution contestation) est loggée dans audit_logs avec l'admin responsable, la date, et le motif.
+RG-FCM-ADMIN-02 : Un admin ne peut pas modifier le montant d'une preuve validée ni le montant d'une commission calculée — ces valeurs sont immuables une fois l'événement conclu.
+RG-FCM-ADMIN-03 : En cas de contestation d'un journaliste sur une preuve rejetée, HERALDO dispose de 72h pour trancher. Au-delà, escalation automatique au Directeur Général.
+RG-FCM-ADMIN-04 : Les paiements Mobile Money échoués sont automatiquement retentés 3 fois (à 1h, 6h, 24h) avant alerte humaine.
+RG-FCM-ADMIN-05 : Les commissions HERALDO sont exportées chaque nuit vers Odoo comme revenus variables, avec ligne analytique par client pour reporting par segment.
+
+7. MODULE A5 — DASHBOARD (PILOTAGE MÉTIER SAAS)
+
+7.1 Objectif fonctionnel
+Fournir au Directeur Général, au Directeur Commercial et au Customer Success une vue temps réel des KPIs métier SaaS essentiels : MRR, ARR, churn, activation, rétention, NPS, pipeline, conversion. C'est le cockpit stratégique d'HERALDO.
+7.2 KPIs à afficher
+Bloc Revenu
+KPI
+Calcul
+MRR (Monthly Recurring Revenue)
+Somme des annual_price_fcfa / 12 pour abonnements active
+ARR (Annual Recurring Revenue)
+MRR × 12
+Nouveau MRR du mois
+Nouvelles souscriptions active du mois × prix/12
+MRR perdu (churn)
+Résiliations du mois × prix/12
+MRR net gagné
+Nouveau MRR + expansion (upgrades) - churn - downgrades
+Commissions FCM du mois
+Sum fcm_transactions.heraldo_commission WHERE période
+Revenu total (MRR + FCM)
+MRR + commissions mensuelles
+
+Bloc Clients
+KPI
+Calcul
+Clients actifs totaux
+Count subscriptions WHERE status='active'
+Nouveaux clients du mois
+Count nouvelles souscriptions activées
+Clients perdus du mois
+Count résiliations
+Taux de churn mensuel
+Clients perdus / Clients début de mois
+LTV moyenne (Lifetime Value)
+ARPU × (1 / churn_rate)
+CAC (Customer Acquisition Cost)
+Budget marketing + commercial / nouveaux clients
+LTV/CAC ratio
+LTV / CAC (idéal > 3)
+
+Bloc Journalistes
+KPI
+Calcul
+Journalistes accrédités totaux
+Count journalists WHERE status='active'
+Nouvelles accréditations du mois
+
+Journalistes actifs 30j
+Count avec usage_events dans les 30 derniers jours
+Ratio DAU/MAU
+Daily Active Users / Monthly Active Users
+Taux de rétention 30/90/180j
+Par cohortes
+Journalistes ayant reçu paiement FCM
+Count distinct
+NPS journalistes
+Score Net Promoter Score mensuel
+
+Bloc Activité plateforme
+KPI
+Calcul
+Communiqués envoyés / mois
+
+Salles AGORA organisées / mois
+
+Volume FCM traité / mois
+Sum paiements
+Publications générées / mois
+
+Portée cumulée du mois
+Sum reach_estimated
+
+7.3 Fréquences de rafraîchissement
+Type de KPI
+Fréquence de rafraîchissement
+Revenus (MRR, ARR, churn)
+Temps réel (calculé à la volée)
+Clients actifs, nouveaux, perdus
+Temps réel
+Journalistes accrédités
+Temps réel
+Taux de rétention, cohortes
+Quotidien (recalcul nuit)
+Activité plateforme
+Quotidien
+NPS
+Mensuel (après sondage)
+
+7.4 Endpoints API — Préfixe /v1/admin/dashboard
+Endpoint
+Description
+GET /v1/admin/dashboard/revenue
+Bloc revenus (MRR, ARR, etc.)
+GET /v1/admin/dashboard/clients
+Bloc clients (actifs, churn...)
+GET /v1/admin/dashboard/journalists
+Bloc journalistes
+GET /v1/admin/dashboard/activity
+Bloc activité plateforme
+GET /v1/admin/dashboard/cohort-retention
+Matrice cohortes
+GET /v1/admin/dashboard/export
+Export complet Excel pour CODIR mensuel
+
+
+8. MODULE A6 — SUPPORT (HELPDESK INTÉGRÉ)
+
+8.1 Objectif fonctionnel
+Gérer les demandes d'assistance des clients (institutions) et des journalistes via un système de tickets intégré à la plateforme. Au démarrage, nous utilisons l'outil externe Crisp. Ce module peut être construit en Phase 2 quand le volume justifiera une solution intégrée pour économiser l'abonnement externe et centraliser les données support avec les données client.
+8.2 Stratégie en deux temps
+Phase 1 — Outil externe (Crisp ou équivalent) — M0 à M12
+Widget Crisp intégré dans la plateforme HERALDO via JS.
+Coût : 5 000 à 15 000 FCFA/mois selon nombre d'agents.
+Gestion simple, pas de développement nécessaire.
+Phase 2 — Support intégré — M12+
+Module construit dans HERALDO avec tables tickets, ticket_messages, ticket_attachments.
+Intégration directe avec les données client (voir l'historique complet du client depuis le ticket).
+Possibilité de déclencher des actions admin depuis le ticket (suspendre abonnement, offrir crédit FCM, etc.).
+Économie de 180 000 FCFA/an sur Crisp (quand volume > 50 tickets/mois).
+8.3 Intégration Phase 1 avec Crisp
+Même en utilisant Crisp externe, on peut enrichir l'expérience support via :
+Envoi à Crisp des métadonnées client via API Crisp (quand un client démarre un chat, Crisp affiche son abonnement, son ancienneté, son score de santé)
+Webhook Crisp → HERALDO quand un ticket est clos, pour enregistrer l'événement dans usage_events
+Export mensuel depuis Crisp vers HERALDO pour métriques globales
+
+9. MODULE A7 — ALERTES (ALERTES OPÉRATIONNELLES)
+
+9.1 Objectif fonctionnel
+Centraliser toutes les alertes opérationnelles qui concernent l'équipe HERALDO (pas les clients). Exemples : client en impayé, preuve FCM contestée, publication sociale échouée, token OAuth expiré, incident infrastructure. Délivrance via email, Slack, SMS selon criticité.
+9.2 Types d'alertes et destinataires
+Type
+Destinataire
+Canal
+Client impayé depuis 30j
+Comptabilité + Customer Success
+Email quotidien
+Client à risque de churn (health < 30)
+Customer Success
+Notification Slack + email
+Preuve FCM contestée > 48h
+Customer Success Journalistes
+Email + Slack
+Paiement FCM échoué après 3 retries
+Équipe Technique + Finance
+Slack + SMS
+Token OAuth social expiré d'un client
+Customer Success
+Email avec lien reconnexion à envoyer au client
+Incident infrastructure (serveur down)
+Équipe Technique
+SMS + Slack + appel
+Pic anormal d'usage (DDOS potentiel)
+Équipe Technique
+SMS + Slack
+Accréditation en attente > 72h
+Customer Success Journalistes
+Email quotidien
+Commission FCM mensuelle à facturer
+Comptabilité
+Email mensuel
+
+9.3 Schéma de base de données
+Table admin_alerts
+Champ
+Type
+Description
+id
+UUID PK
+
+alert_type
+VARCHAR(100)
+Identifiant type (client_unpaid_30d, etc.)
+severity
+ENUM
+info | warning | critical | emergency
+title
+VARCHAR(300)
+
+message
+TEXT
+
+entity_type
+VARCHAR(50) NULL
+client | journalist | subscription | transaction
+entity_id
+UUID NULL
+
+assigned_to_team
+ENUM
+customer_success | finance | tech | commercial | leadership
+assigned_to_user_id
+UUID NULL
+
+status
+ENUM DEFAULT 'open'
+open | acknowledged | resolved | dismissed
+acknowledged_at
+TIMESTAMP NULL
+
+resolved_at
+TIMESTAMP NULL
+
+resolution_notes
+TEXT NULL
+
+created_at
+TIMESTAMP
+
+
+
+10. MODULE A8 — ODOO-SYNC (CONNECTEUR ODOO)
+
+10.1 Objectif fonctionnel
+Module le plus critique du système ADMIN : il assure la synchronisation bidirectionnelle entre HERALDO PRESS et Odoo. Sans ce connecteur, les équipes devront faire de la double saisie et le système sera un frein au quotidien.
+10.2 Flux synchronisés
+Flux HERALDO → Odoo (sortants)
+Événement HERALDO
+Action Odoo
+Fréquence
+Nouvelle souscription active
+Création fiche client + émission facture
+Temps réel
+Renouvellement d'abonnement
+Émission facture renouvellement
+Temps réel
+Commission FCM perçue
+Création ligne revenu variable
+Batch quotidien nuit
+Suspension client
+Note sur la fiche client
+Temps réel
+Résiliation
+Marquage client inactif
+Temps réel
+Upgrade formule
+Facture d'avenant prorata temporis
+Temps réel
+
+Flux Odoo → HERALDO (entrants)
+Événement Odoo
+Action HERALDO
+Fréquence
+Paiement facture reçu
+Activation abonnement si pending, mise à jour payment_status
+Webhook temps réel
+Facture en retard (> 30j)
+Déclencher workflow suspension
+Webhook ou polling quotidien
+Facture annulée
+Retour à pending
+Temps réel
+Avoir émis
+Crédit sur abonnement
+Temps réel
+
+10.3 Architecture technique de l'intégration
+Méthode recommandée
+Odoo expose une API XML-RPC et JSON-RPC standard. Toutes les opérations CRUD sont accessibles. Documentation officielle : https://www.odoo.com/documentation
+Côté HERALDO
+Module NestJS src/modules/odoo-sync/ avec service OdooClientService qui encapsule les appels API.
+Config via variables d'environnement : ODOO_URL, ODOO_DB_NAME, ODOO_API_USER, ODOO_API_PASSWORD.
+Queue Bull/Redis pour les jobs sortants (résilience en cas de panne Odoo temporaire).
+Worker dédié consumant la queue avec retry automatique (3 tentatives à 5, 30, 300 secondes).
+Endpoint webhook POST /v1/webhooks/odoo pour recevoir les événements entrants.
+Côté Odoo
+Module Python custom à développer (par intégrateur Odoo CI) qui émet les webhooks vers HERALDO lors des événements financiers clés.
+Budget intégration : environ 3 à 5 millions FCFA pour un intégrateur Odoo CI qualifié (développement + formation + recette).
+10.4 Mapping des entités HERALDO ↔ Odoo
+Entité HERALDO
+Entité Odoo
+Notes
+users (client institution)
+res.partner (type customer)
+Même email = clé de matching
+subscriptions (abonnement)
+subscription.subscription + account.move (facture)
+Module Odoo Subscriptions nécessaire
+fcm_transactions (paiements)
+account.move.line (écritures analytiques)
+Dimension analytique par client
+users (employés HERALDO)
+hr.employee
+Synchronisation unidirectionnelle Odoo → HERALDO
+audit_logs
+—
+Pas de miroir dans Odoo, logs restent HERALDO
+
+10.5 Endpoints API — Préfixe /v1/admin/odoo-sync
+Endpoint
+Description
+POST /v1/webhooks/odoo
+Webhook entrant Odoo → HERALDO (payment_received, invoice_overdue...)
+GET /v1/admin/odoo-sync/status
+État du connecteur (dernière sync, erreurs récentes)
+POST /v1/admin/odoo-sync/resync/{entity_type}/{id}
+Force resync manuelle d'une entité
+GET /v1/admin/odoo-sync/queue
+État de la queue de jobs sortants
+GET /v1/admin/odoo-sync/errors
+Liste des erreurs de synchronisation à traiter
+
+10.6 Robustesse
+Idempotence : chaque opération sortante porte un external_reference unique, si Odoo reçoit deux fois le même ID, il le détecte et refuse la duplication.
+Retry automatique : 3 tentatives à 5s, 30s, 300s puis alerte humaine.
+Buffer local : les événements qui échouent à synchroniser sont stockés dans odoo_sync_queue et retentés par un worker toutes les 10 minutes jusqu'à succès.
+Réconciliation nocturne : chaque nuit, un script vérifie que toutes les souscriptions HERALDO ont leur pendant Odoo et signale les écarts.
+
+11. ARCHITECTURE GLOBALE — VUE D'ENSEMBLE
+
+11.1 Schéma conceptuel
+Vue synthétique des 3 systèmes et de leurs flux :
+
+  ┌─────────────────────────────────────────┐
+  │         PLATEFORME HERALDO PRESS        │
+  │                                         │
+  │  Modules métier :                       │
+  │  • ÉMISSION  • AGORA    • RÉSEAU        │
+  │  • FCM       • AMPLIF   • IMPACT        │
+  │                                         │
+  │  Modules Cockpit (attaché) :            │
+  │  • SOCIAL  • STUDIO  • INBOX  • AGENDA │
+  │  • CRM     • BRIEF   • MOBILE           │
+  │                                         │
+  │  Modules Journaliste :                  │
+  │  • PROFIL  • CARNET   • CAPTURE • FORUM │
+  │                                         │
+  │  Modules ADMIN (internes) :             │
+  │  • ABONNEMENTS  • USAGE  • ACCRÉDIT.    │
+  │  • FCM-ADMIN    • DASHBOARD  • ALERTES │
+  │  • ODOO-SYNC (connecteur)               │
+  └────────────┬────────────────────────────┘
+               │
+               │  API bidirectionnelle
+               ▼
+  ┌─────────────────────────────────────────┐
+  │              ODOO (SaaS)                │
+  │                                         │
+  │  • Comptabilité SYSCOHADA              │
+  │  • Facturation clients                 │
+  │  • Paie et RH                          │
+  │  • Trésorerie                          │
+  │  • Déclarations fiscales DGI/CNPS      │
+  │  • Achats et fournisseurs              │
+  │  • CRM prospects (optionnel)           │
+  └─────────────────────────────────────────┘
+
+  Outils standards complémentaires :
+  • Notion (documentation, projets internes)
+  • Slack (messagerie équipe)
+  • Google Workspace (bureautique, mails)
+  • Crisp ou Intercom (support client Phase 1)
+  • HubSpot CRM (prospects commerciaux Phase 1)
+11.2 Répartition des responsabilités par équipe
+Équipe
+Outil principal
+Outils secondaires
+Direction Générale
+HERALDO Dashboard
+Odoo (reporting financier)
+Commerciale
+HubSpot CRM → Odoo CRM
+HERALDO ADMIN (validation souscriptions)
+Customer Success
+HERALDO ADMIN (USAGE, ALERTES)
+Crisp (support)
+Technique
+HERALDO ADMIN + GitHub
+Notion (documentation)
+Finance / Comptabilité
+Odoo
+HERALDO ADMIN (FCM-ADMIN)
+RH
+Odoo Paie
+Notion (onboarding)
+Marketing
+HubSpot + Notion
+Outils créa externes
+
+
+12. BUDGET DE DÉVELOPPEMENT DES MODULES ADMIN
+
+12.1 Coûts de développement
+Module
+Complexité
+Budget estimé
+Durée
+A1 ABONNEMENTS
+Moyenne
+3 500 000 FCFA
+3 sem
+A2 USAGE
+Moyenne
+3 000 000 FCFA
+3 sem
+A3 ACCRÉDITATIONS
+Moyenne
+2 500 000 FCFA
+2 sem
+A4 FCM-ADMIN
+Élevée
+4 500 000 FCFA
+4 sem
+A5 DASHBOARD
+Moyenne
+3 000 000 FCFA
+3 sem
+A6 SUPPORT (Phase 2 uniquement)
+Moyenne
+3 500 000 FCFA
+3 sem
+A7 ALERTES
+Faible
+1 500 000 FCFA
+2 sem
+A8 ODOO-SYNC (le plus critique)
+Élevée
+5 000 000 FCFA
+4 sem
+Intégration Odoo (côté Odoo, par intégrateur)
+—
+4 000 000 FCFA
+4 sem
+TOTAL P0 (sans A6)
+
+27 000 000 FCFA
+15-18 sem
+
+12.2 Coûts opérationnels récurrents
+Poste
+Coût annuel
+Odoo SaaS (5 utilisateurs au démarrage)
+2 400 000 FCFA
+Expert-comptable CI (prestation mensuelle)
+1 800 000 FCFA
+HubSpot CRM (version gratuite au démarrage)
+0 FCFA
+Notion (5 utilisateurs)
+600 000 FCFA
+Google Workspace (10 utilisateurs)
+720 000 FCFA
+Slack (10 utilisateurs)
+900 000 FCFA
+Crisp support (Phase 1)
+180 000 FCFA
+TOTAL coûts outils gestion An 1
+6 600 000 FCFA
+
+12.3 ROI de l'investissement ADMIN
+L'investissement de 27 M FCFA pour les modules ADMIN génère un ROI direct mesurable :
+Économie de 2 ETP de saisie/administration en An 2 = ~12 M FCFA/an
+Détection précoce des risques de churn via USAGE et DASHBOARD = ~10% de clients sauvés × MRR moyen = plusieurs millions/an
+Automatisation des relances impayés via ODOO-SYNC = réduction DSO de 15 jours = trésorerie améliorée
+Temps CSM libéré via ALERTES intelligentes = productivité +30%
+Les modules ADMIN ne sont pas un coût, ce sont l'infrastructure qui rend l'entreprise pilotable. Sans eux, HERALDO PRESS deviendrait rapidement ingérable dès 100 clients actifs. Avec eux, l'entreprise peut scaler jusqu'à 1000-2000 clients avec la même équipe centrale.
+
+
+13. PLANNING DE DÉVELOPPEMENT
+
+13.1 Ordonnancement recommandé
+Sprint
+Durée
+Modules
+Livrable
+S1
+3 sem
+A1 ABONNEMENTS + A8 ODOO-SYNC (début)
+Cycle de vie + facturation Odoo
+S2
+3 sem
+A8 ODOO-SYNC (fin) + A7 ALERTES
+Connecteur complet + alertes opérationnelles
+S3
+2 sem
+A3 ACCRÉDITATIONS
+Backend accréditations
+S4
+3 sem
+A2 USAGE
+Tracking + health scores
+S5
+4 sem
+A4 FCM-ADMIN
+Administration FCM complète
+S6
+3 sem
+A5 DASHBOARD
+Pilotage métier temps réel
+
+Total : 18 semaines (4,5 mois) en séquentiel — réductible à 12 semaines avec 2 développeurs en parallèle sur A1/A2 et A3/A4.
+13.2 Prérequis pour démarrer
+Odoo déployé et configuré avec plan comptable SYSCOHADA (intégrateur CI sélectionné)
+Expert-comptable CI engagé pour validation paramétrage Odoo
+Comptes utilisateurs créés dans Odoo pour l'équipe
+Serveur Odoo stable (SaaS ou self-hosted)
+Sauvegardes Odoo configurées (important pour les données financières)
+
+14. SYNTHÈSE ET DÉCISIONS
+
+Les 4 décisions immédiates
+**Décision 1** — Sélectionner un intégrateur Odoo CI certifié. Critères : référence OHADA, réseau d'experts-comptables associés, capacité de développement custom. Budget prévisionnel : 4 M FCFA pour déploiement initial + 3 M FCFA pour développement module webhook vers HERALDO.
+**Décision 2** — Valider le budget de 27 M FCFA de développement ADMIN HERALDO sur 4,5 mois. Ce budget s'ajoute aux 36,5 M FCFA déjà prévus pour Cockpit (18M) + App Journaliste (18,5M).
+**Décision 3** — Nommer un Product Owner interne côté HERALDO pour piloter le module ADMIN. C'est lui qui arbitrera les priorités, validera les specs détaillées, et testera les livrables.
+**Décision 4** — Commencer par Odoo et les modules A1 + A8 dès le premier jour de développement. Un système HERALDO sans connecteur Odoo est opérationnellement non viable au-delà de 50 clients.
+Bilan budgétaire consolidé HERALDO An 1
+Poste d'investissement
+Montant
+Plateforme HERALDO PRESS core (CDC initial)
+8 000 000 FCFA
+Cockpit Attaché de Presse (CDC 12)
+18 000 000 FCFA
+App Journaliste enrichie (CDC 13)
+18 500 000 FCFA
+Modules ADMIN + Odoo (ce CDC)
+27 000 000 FCFA
+Intégration Odoo côté Odoo
+4 000 000 FCFA
+TOTAL INVESTISSEMENT DÉVELOPPEMENT
+75 500 000 FCFA
+
+Ce total de 75,5 M FCFA inclut les 18 M de l'investissement initial annoncé dans le Pitch Deck + les extensions successives. Il construit une infrastructure complète et opérationnelle qui supporte la croissance jusqu'à 500 clients et 1000 journalistes sans nouveau développement majeur.
+En investissant 75 M FCFA sur 15 mois, vous construisez la plateforme complète qui vaudra plusieurs centaines de millions de FCFA à 3 ans. C'est le socle technique qui transforme HERALDO PRESS d'une idée prometteuse en une infrastructure critique du paysage médiatique ouest-africain.
+
+
+«   Votre message, notre mission.   »
+Une plateforme pour les clients. Un cockpit pour les attachés.
+Un outil pour les journalistes. Une gestion intégrée pour votre équipe.
+
+HERALDO PRESS — CDC Module ADMIN — Avril 2026

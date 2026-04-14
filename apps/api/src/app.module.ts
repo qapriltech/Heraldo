@@ -27,6 +27,11 @@ import { JournalistRevenuesModule } from './journalist-revenues/journalist-reven
 import { JournalistDirectoryModule } from './journalist-directory/journalist-directory.module';
 import { ForumModule } from './forum/forum.module';
 import { JournalistNotificationsModule } from './journalist-notifications/journalist-notifications.module';
+import { AdminSubscriptionsModule } from './admin-subscriptions/admin-subscriptions.module';
+import { AdminUsageModule } from './admin-usage/admin-usage.module';
+import { AdminAccreditationsModule } from './admin-accreditations/admin-accreditations.module';
+import { AdminAlertsModule } from './admin-alerts/admin-alerts.module';
+import { OdooSyncModule } from './odoo-sync/odoo-sync.module';
 
 @Module({
   imports: [
@@ -56,6 +61,11 @@ import { JournalistNotificationsModule } from './journalist-notifications/journa
     JournalistDirectoryModule,
     ForumModule,
     JournalistNotificationsModule,
+    AdminSubscriptionsModule,
+    AdminUsageModule,
+    AdminAccreditationsModule,
+    AdminAlertsModule,
+    OdooSyncModule,
   ],
   providers: [
     {

@@ -296,11 +296,22 @@ model Subscription {
   agoraRoomsPerMonth   Int         @default(1)  @map("agora_rooms_per_month")
   maxAgencyClients     Int         @default(0)  @map("max_agency_clients") // 5 pour AGENCE (RG-ACT-03)
   paymentId       String?          @map("payment_id")
+  formula              String?          @map("formula_type") // heraldo_elu|heraldo_mairie|heraldo_institution|heraldo_agence
+  odooInvoiceId        String?          @map("odoo_invoice_id")
+  paymentStatus        String           @default("pending") @map("payment_status")
+  paymentReceivedAt    DateTime?        @map("payment_received_at")
+  paymentMethod        String?          @map("payment_method")
+  suspendedAt          DateTime?        @map("suspended_at")
+  suspensionReason     String?          @map("suspension_reason")
+  cancelledAt          DateTime?        @map("cancelled_at")
+  cancellationReason   String?          @map("cancellation_reason")
+  notes                String?
   createdAt       DateTime         @default(now()) @map("created_at")
   updatedAt       DateTime         @updatedAt @map("updated_at")
 
   institution Institution @relation(fields: [institutionId], references: [id])
   payment     Payment?    @relation(fields: [paymentId], references: [id])
+  history     SubscriptionHistory[]
 
   @@map("subscriptions")
 }
@@ -1528,4 +1539,157 @@ model JournalistNotificationPreference {
   journalist Journalist @relation(fields: [journalistId], references: [id], onDelete: Cascade)
 
   @@map("journalist_notification_preferences")
+}
+
+// ============================================================
+// ADMIN MODULES — Subscriptions, Usage, Accreditations, Alerts, Odoo
+// ============================================================
+
+enum SubscriptionEventType {
+  CREATED
+  ACTIVATED
+  RENEWED
+  UPGRADED
+  DOWNGRADED
+  SUSPENDED
+  REACTIVATED
+  CANCELLED
+  EXPIRED
+}
+
+enum AlertSeverity {
+  INFO
+  WARNING
+  CRITICAL
+  EMERGENCY
+}
+
+enum AccreditationRequestStatus {
+  PENDING
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  ON_HOLD
+}
+
+model SubscriptionHistory {
+  id             String                @id @default(uuid())
+  subscriptionId String                @map("subscription_id")
+  eventType      SubscriptionEventType @map("event_type")
+  fromStatus     String?               @map("from_status")
+  toStatus       String?               @map("to_status")
+  fromFormula    String?               @map("from_formula")
+  toFormula      String?               @map("to_formula")
+  triggeredBy    String?               @map("triggered_by")
+  details        Json?
+  occurredAt     DateTime              @default(now()) @map("occurred_at")
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@map("subscription_histories")
+}
+
+model UsageEvent {
+  id            String   @id @default(uuid())
+  clientId      String   @map("client_id")
+  userId        String?  @map("user_id")
+  eventName     String   @map("event_name")
+  eventCategory String   @map("event_category")
+  eventData     Json?    @map("event_data")
+  sessionId     String?  @map("session_id")
+  userAgent     String?  @map("user_agent")
+  ipAddress     String?  @map("ip_address")
+  occurredAt    DateTime @default(now()) @map("occurred_at")
+
+  @@index([clientId, occurredAt])
+  @@index([clientId, eventCategory])
+  @@map("usage_events")
+}
+
+model ClientHealthScore {
+  id              String   @id @default(uuid())
+  clientId        String   @unique @map("client_id")
+  activityScore   Int      @default(0) @map("activity_score")
+  engagementScore Int      @default(0) @map("engagement_score")
+  adoptionScore   Int      @default(0) @map("adoption_score")
+  paymentScore    Int      @default(0) @map("payment_score")
+  totalScore      Int      @default(0) @map("total_score")
+  tier            String   @default("standard")
+  calculatedAt    DateTime @default(now()) @map("calculated_at")
+
+  @@map("client_health_scores")
+}
+
+model AccreditationRequest {
+  id                    String                     @id @default(uuid())
+  firstName             String                     @map("first_name")
+  lastName              String                     @map("last_name")
+  email                 String
+  phone                 String
+  mediaOutletDeclared   String                     @map("media_outlet_declared")
+  specialty             String
+  zoneGeo               String                     @map("zone_geo")
+  pressCardUrl          String?                    @map("press_card_url")
+  alternativeProofUrl   String?                    @map("alternative_proof_url")
+  acquisitionChannel    String                     @map("acquisition_channel")
+  referrerJournalistId  String?                    @map("referrer_journalist_id")
+  status                AccreditationRequestStatus @default(PENDING)
+  reviewedBy            String?                    @map("reviewed_by")
+  reviewNotes           String?                    @map("review_notes")
+  rejectionReason       String?                    @map("rejection_reason")
+  submittedAt           DateTime                   @default(now()) @map("submitted_at")
+  reviewedAt            DateTime?                  @map("reviewed_at")
+  journalistId          String?                    @map("journalist_id")
+
+  @@map("accreditation_requests")
+}
+
+model AccreditationRevocation {
+  id                  String    @id @default(uuid())
+  journalistId        String    @map("journalist_id")
+  reasonCategory      String    @map("reason_category")
+  reasonDetail        String?   @map("reason_detail")
+  evidenceUrls        String[]  @map("evidence_urls")
+  decidedByCommittee  Boolean   @default(false) @map("decided_by_committee")
+  revokedBy           String?   @map("revoked_by")
+  revokedAt           DateTime  @default(now()) @map("revoked_at")
+  canReapplyAfter     DateTime? @map("can_reapply_after")
+
+  @@map("accreditation_revocations")
+}
+
+model AdminAlert {
+  id               String        @id @default(uuid())
+  alertType        String        @map("alert_type")
+  severity         AlertSeverity
+  title            String
+  message          String
+  entityType       String?       @map("entity_type")
+  entityId         String?       @map("entity_id")
+  assignedToTeam   String?       @map("assigned_to_team")
+  assignedToUserId String?       @map("assigned_to_user_id")
+  status           String        @default("open")
+  acknowledgedAt   DateTime?     @map("acknowledged_at")
+  resolvedAt       DateTime?     @map("resolved_at")
+  resolutionNotes  String?       @map("resolution_notes")
+  createdAt        DateTime      @default(now()) @map("created_at")
+
+  @@map("admin_alerts")
+}
+
+model OdooSyncJob {
+  id          String   @id @default(uuid())
+  entityType  String   @map("entity_type")
+  entityId    String   @map("entity_id")
+  direction   String   // outbound|inbound
+  action      String
+  payload     Json
+  status      String   @default("pending")
+  attempts    Int      @default(0)
+  lastError   String?  @map("last_error")
+  completedAt DateTime? @map("completed_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([status, createdAt])
+  @@map("odoo_sync_jobs")
 }
