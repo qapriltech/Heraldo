@@ -19,14 +19,14 @@ export class FcmController {
   constructor(private readonly service: FcmService) {}
 
   @Post('pools')
-  @Roles('INSTITUTION', 'ADMIN')
+  @Roles('INSTITUTION', 'AGENCY', 'ADMIN')
   createPool(@Req() req: any, @Body() body: any) {
     return this.service.createPool(req.user.id, body);
   }
 
   @Get('pools')
-  findAllPools(@Query() query: any) {
-    return this.service.findAllPools(query);
+  findAllPools(@Req() req: any, @Query() query: any) {
+    return this.service.findAllPools(req.user.id, query);
   }
 
   @Get('pools/:id')
@@ -35,17 +35,13 @@ export class FcmController {
   }
 
   @Post('pools/:id/fund')
-  @Roles('INSTITUTION', 'ADMIN')
-  fundPool(
-    @Param('id') id: string,
-    @Body('amount') amount: number,
-    @Body('paymentMethod') paymentMethod: string,
-  ) {
-    return this.service.fundPool(id, amount, paymentMethod);
+  @Roles('INSTITUTION', 'AGENCY', 'ADMIN')
+  fundPool(@Param('id') id: string, @Body() body: any) {
+    return this.service.fundPool(id, body.amount, body.paymentMethod);
   }
 
   @Post('pools/:id/invite')
-  @Roles('INSTITUTION', 'ADMIN')
+  @Roles('INSTITUTION', 'AGENCY', 'ADMIN')
   inviteJournalists(@Param('id') id: string, @Body('journalistIds') journalistIds: string[]) {
     return this.service.inviteJournalists(id, journalistIds);
   }
@@ -56,20 +52,14 @@ export class FcmController {
     return this.service.submitProof(id, req.user.id, body);
   }
 
-  @Put('pools/:id/proof/:proofId/validate')
-  @Roles('INSTITUTION', 'ADMIN')
-  validateProof(
-    @Param('id') id: string,
-    @Param('proofId') proofId: string,
-    @Body('approved') approved: boolean,
-  ) {
-    return this.service.validateProof(id, proofId, approved);
-  }
-
-  @Post('pools/:id/auto-pay')
-  @Roles('INSTITUTION', 'ADMIN')
-  autoPay(@Param('id') id: string) {
-    return this.service.autoPay(id);
+  @Put('proofs/:proofId/validate')
+  @Roles('ADMIN')
+  validateProof(@Param('proofId') proofId: string, @Req() req: any, @Body() body: any) {
+    return this.service.validateProof(body.poolId, proofId, {
+      approved: body.approved,
+      rejectReason: body.rejectReason,
+      reviewerId: req.user.id,
+    });
   }
 
   @Get('pools/:id/stats')
