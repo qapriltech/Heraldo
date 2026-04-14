@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
@@ -89,7 +89,7 @@ export default function NewAgoraPage() {
     finally { setLoadingJ(false); }
   };
 
-  if (typeof window !== "undefined" && !jLoaded && !loadingJ) loadJournalists();
+  useEffect(() => { loadJournalists(); }, []);
 
   const toggleJ = (id: string) =>
     setInvitedIds(prev => prev.includes(id) ? prev.filter(j => j !== id) : [...prev, id]);

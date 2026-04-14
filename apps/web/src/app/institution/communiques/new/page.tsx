@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
@@ -82,9 +82,7 @@ export default function NewCommuniquePage() {
   };
 
   // Charger au premier rendu
-  if (typeof window !== "undefined" && !journalistsLoaded && !loadingJournalists) {
-    loadJournalists();
-  }
+  useEffect(() => { loadJournalists(); }, []);
 
   const toggleJournalist = (id: string) =>
     setSelectedJournalists(prev => prev.includes(id) ? prev.filter(j => j !== id) : [...prev, id]);
