@@ -333,6 +333,21 @@ model Journalist {
   preferredContactTime String?            @map("preferred_contact_time")
   tier                String              @default("tier2") // tier1 | tier2 | tier3
   tagsEditorial       String[]            @map("tags_editorial")
+  // Profile enrichment fields
+  profilePhotoUrl     String?             @map("profile_photo_url")
+  coverPhotoUrl       String?             @map("cover_photo_url")
+  bio                 String?
+  yearsExperience     Int?                @map("years_experience")
+  previousEmployers   Json?               @map("previous_employers")
+  education           Json?
+  awards              Json?
+  websiteUrl          String?             @map("website_url")
+  twitterHandle       String?             @map("twitter_handle")
+  linkedinUrl         String?             @map("linkedin_url")
+  instagramHandle     String?             @map("instagram_handle")
+  profileVisibility   String              @default("public") @map("profile_visibility")
+  profileSlug         String?             @unique @map("profile_slug")
+  profileCompletionPct Int                @default(0) @map("profile_completion_pct")
   createdAt           DateTime            @default(now()) @map("created_at")
   updatedAt           DateTime            @updatedAt @map("updated_at")
 
@@ -342,6 +357,13 @@ model Journalist {
   agoraParticipations AgoraParticipant[]
   fcmInvitations    FcmInvitation[]
   fcmProofs         FcmProof[]
+  publications      JournalistPublication[]
+  agendaItems       JournalistAgendaItem[]
+  publicationNotes  JournalistPublicationNote[]
+  followers         JournalistFollow[]          @relation("FollowedJournalist")
+  following         JournalistFollow[]          @relation("FollowerJournalist")
+  notifications     JournalistNotification[]
+  notificationPrefs JournalistNotificationPreference?
 
   @@map("journalists")
 }
@@ -1279,4 +1301,231 @@ model Brief {
   updatedAt         DateTime      @updatedAt @map("updated_at")
 
   @@map("briefs")
+}
+
+// ============================================================
+// JOURNALIST MODULES — Portfolio, Agenda, Directory, Forum, Notifications
+// ============================================================
+
+enum PublicationType {
+  ARTICLE
+  TV_SEGMENT
+  RADIO_SEGMENT
+  PODCAST
+  SOCIAL_MEDIA
+  OPINION
+  INVESTIGATION
+  INTERVIEW
+  PHOTO_REPORT
+  OTHER
+}
+
+enum PublicationSourceType {
+  FCM_PROOF
+  MANUAL_ENTRY
+  AUTO_DETECTED
+}
+
+enum JournalistAgendaEventType {
+  PRESS_CONFERENCE
+  INTERVIEW
+  EDITORIAL_MEETING
+  DEADLINE
+  FIELD_REPORT
+  AGORA_SESSION
+  PERSONAL
+  OTHER
+}
+
+enum JournalistAgendaItemStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum PublicationNoteType {
+  COMMENT
+  CORRECTION
+  EDITORIAL_NOTE
+  FEEDBACK
+}
+
+enum NotificationPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum NotificationStatus {
+  UNREAD
+  READ
+  ARCHIVED
+}
+
+model JournalistPublication {
+  id                 String              @id @default(uuid())
+  journalistId       String              @map("journalist_id")
+  title              String
+  mediaOutletNameRaw String              @map("media_outlet_name_raw")
+  publicationType    PublicationType     @map("publication_type")
+  url                String?
+  previewImageUrl    String?             @map("preview_image_url")
+  excerpt            String?
+  publishedAt        DateTime?           @map("published_at")
+  sourceType         PublicationSourceType @map("source_type")
+  fcmTransactionId   String?             @map("fcm_transaction_id")
+  tags               String[]
+  isFeatured         Boolean             @default(false) @map("is_featured")
+  isPublic           Boolean             @default(true) @map("is_public")
+  createdAt          DateTime            @default(now()) @map("created_at")
+
+  journalist Journalist @relation(fields: [journalistId], references: [id], onDelete: Cascade)
+  notes      JournalistPublicationNote[]
+
+  @@map("journalist_publications")
+}
+
+model JournalistAgendaItem {
+  id                    String          @id @default(uuid())
+  journalistId          String          @map("journalist_id")
+  title                 String
+  description           String?
+  eventType             JournalistAgendaEventType @map("event_type")
+  location              String?
+  startsAt              DateTime        @map("starts_at")
+  endsAt                DateTime?       @map("ends_at")
+  allDay                Boolean         @default(false) @map("all_day")
+  linkedAgoraRoomId     String?         @map("linked_agora_room_id")
+  reminderMinutesBefore Int[]           @map("reminder_minutes_before")
+  notes                 String?
+  status                JournalistAgendaItemStatus @default(SCHEDULED)
+  color                 String?
+  createdAt             DateTime        @default(now()) @map("created_at")
+  updatedAt             DateTime        @updatedAt @map("updated_at")
+
+  journalist Journalist @relation(fields: [journalistId], references: [id], onDelete: Cascade)
+
+  @@map("journalist_agenda_items")
+}
+
+model JournalistPublicationNote {
+  id            String              @id @default(uuid())
+  publicationId String              @map("publication_id")
+  journalistId  String              @map("journalist_id")
+  noteType      PublicationNoteType @map("note_type")
+  content       String
+  isPrivate     Boolean             @default(true) @map("is_private")
+  createdAt     DateTime            @default(now()) @map("created_at")
+
+  publication JournalistPublication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  journalist  Journalist            @relation(fields: [journalistId], references: [id], onDelete: Cascade)
+
+  @@map("journalist_publication_notes")
+}
+
+model JournalistFollow {
+  id                   String   @id @default(uuid())
+  followerId           String   @map("follower_id")
+  followedId           String   @map("followed_id")
+  notificationsEnabled Boolean  @default(true) @map("notifications_enabled")
+  createdAt            DateTime @default(now()) @map("created_at")
+
+  follower Journalist @relation("FollowerJournalist", fields: [followerId], references: [id], onDelete: Cascade)
+  followed Journalist @relation("FollowedJournalist", fields: [followedId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followedId])
+  @@map("journalist_follows")
+}
+
+model ForumChannel {
+  id            String   @id @default(uuid())
+  slug          String   @unique
+  name          String
+  description   String?
+  icon          String?
+  isOfficial    Boolean  @default(false) @map("is_official")
+  createdById   String   @map("created_by_id")
+  moderatorsIds String[] @map("moderators_ids")
+  membersCount  Int      @default(0) @map("members_count")
+  postsCount    Int      @default(0) @map("posts_count")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  posts ForumPost[]
+
+  @@map("forum_channels")
+}
+
+model ForumPost {
+  id                    String   @id @default(uuid())
+  channelId             String   @map("channel_id")
+  authorId              String   @map("author_id")
+  title                 String
+  content               String
+  attachedMediaUrls     String[] @map("attached_media_urls")
+  mentionedJournalistIds String[] @map("mentioned_journalist_ids")
+  reactions             Json?
+  repliesCount          Int      @default(0) @map("replies_count")
+  isPinned              Boolean  @default(false) @map("is_pinned")
+  isLocked              Boolean  @default(false) @map("is_locked")
+  isRemoved             Boolean  @default(false) @map("is_removed")
+  removalReason         String?  @map("removal_reason")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  channel ForumChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  replies ForumReply[]
+
+  @@map("forum_posts")
+}
+
+model ForumReply {
+  id                    String   @id @default(uuid())
+  postId                String   @map("post_id")
+  parentReplyId         String?  @map("parent_reply_id")
+  authorId              String   @map("author_id")
+  content               String
+  mentionedJournalistIds String[] @map("mentioned_journalist_ids")
+  reactions             Json?
+  isRemoved             Boolean  @default(false) @map("is_removed")
+  createdAt             DateTime @default(now()) @map("created_at")
+
+  post        ForumPost   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  parentReply ForumReply? @relation("ReplyThread", fields: [parentReplyId], references: [id])
+  childReplies ForumReply[] @relation("ReplyThread")
+
+  @@map("forum_replies")
+}
+
+model JournalistNotification {
+  id           String             @id @default(uuid())
+  journalistId String             @map("journalist_id")
+  type         String
+  title        String
+  body         String
+  payload      Json?
+  priority     NotificationPriority @default(NORMAL)
+  channelsSent String[]           @map("channels_sent")
+  status       NotificationStatus @default(UNREAD)
+  readAt       DateTime?          @map("read_at")
+  createdAt    DateTime           @default(now()) @map("created_at")
+
+  journalist Journalist @relation(fields: [journalistId], references: [id], onDelete: Cascade)
+
+  @@map("journalist_notifications")
+}
+
+model JournalistNotificationPreference {
+  id                String   @id @default(uuid())
+  journalistId      String   @unique @map("journalist_id")
+  preferences       Json
+  doNotDisturbStart String?  @map("do_not_disturb_start")
+  doNotDisturbEnd   String?  @map("do_not_disturb_end")
+  urgentOverrideDnd Boolean  @default(true) @map("urgent_override_dnd")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  journalist Journalist @relation(fields: [journalistId], references: [id], onDelete: Cascade)
+
+  @@map("journalist_notification_preferences")
 }

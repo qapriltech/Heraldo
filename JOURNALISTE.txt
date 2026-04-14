@@ -1,0 +1,1311 @@
+
+
+
+
+CDC TECHNIQUE — EXTENSION DU CDC-HERALDO-001
+Spécifications App Journaliste enrichie
+Transformation de l'app utilitaire en outil professionnel quotidien
+— • —
+
+
+
+
+
+
+
+
+Réf : HP-CDC-APPJOURNO-2026-013 Avril 2026  |  Abidjan, Côte d'Ivoire  Document confidentiel — Usage interne et investisseurs
+
+1. OBJECTIF ET VISION STRATÉGIQUE
+
+L'application HÉRALDO Journaliste actuelle est un outil utilitaire ponctuel (rejoindre une salle AGORA, soumettre une preuve FCM, recevoir un paiement). Le journaliste l'ouvre 2 ou 3 fois par mois. Ce document enrichit l'app pour la transformer en outil professionnel quotidien, utilisé plusieurs fois par jour, sans ajouter de coût variable significatif, sans complexité technique majeure, sans marketplace ni IA coûteuse.
+
+1.1 Ce que nous visons
+Trois transformations fondamentales :
+**Transformation 1** — Du ponctuel au quotidien. Le journaliste ouvre HERALDO chaque jour pour des raisons pratiques qui vont au-delà des salles AGORA.
+**Transformation 2** — De l'outil isolé au réseau professionnel. Le journaliste se connecte à ses pairs via HERALDO, crée son profil public, se fait connaître.
+**Transformation 3** — Du simple récepteur au professionnel outillé. L'app fournit des fonctionnalités métier qui facilitent vraiment son travail.
+1.2 Ce que nous évitons explicitement
+Pas de marketplace de missions (repoussé en phase ultérieure).
+Pas d'assistant IA de rédaction ou de génération de contenus (coûts d'API variables, risques de qualité en français-nouchi).
+Pas de vérification de faits automatique par IA (trop risqué juridiquement).
+Pas de fonctionnalités complexes de production vidéo ou de motion design.
+Pas de système de rating bidirectionnel (nécessite modération lourde).
+1.3 Modules à développer
+Code
+Module
+Priorité
+Complexité
+J1
+PROFIL — Profil public et portfolio journaliste
+P0
+Faible
+J2
+AGENDA — Calendrier personnel des événements presse
+P0
+Faible
+J3
+CARNET — Carnet de sources personnel
+P0
+Faible
+J4
+CAPTURE — Enregistreur audio avec transcription native
+P0
+Moyenne
+J5
+ARCHIVES — Bibliothèque personnelle d'articles publiés
+P0
+Faible
+J6
+REVENUS — Dashboard FCM personnel consolidé
+P0
+Faible
+J7
+ANNUAIRE — Répertoire des journalistes accrédités
+P1
+Faible
+J8
+FORUM — Espaces d'échanges par spécialité
+P1
+Moyenne
+J9
+NOTIFICATIONS — Système de notifications unifié enrichi
+P0
+Faible
+
+1.4 Principes directeurs techniques
+Principe 1 — Zéro coût variable par utilisateur journaliste (pas d'API IA coûteuses).
+Principe 2 — Réutilisation du codebase partagé @heraldo/shared avec l'app Attaché.
+Principe 3 — Utilisation des fonctionnalités natives iOS et Android quand elles existent (reconnaissance vocale, enregistrement audio, stockage local).
+Principe 4 — Stockage local SQLite pour les données personnelles du journaliste (carnet de sources, notes) — aucune transmission serveur sauf si le journaliste le décide.
+Principe 5 — L'app fonctionne en mode hors-ligne pour 80% des fonctionnalités non dépendantes du serveur.
+Principe 6 — Données personnelles du journaliste jamais exposées aux institutions clientes.
+
+2. MODULE J1 — PROFIL (PROFIL PUBLIC ET PORTFOLIO)
+
+2.1 Objectif fonctionnel
+Permettre à chaque journaliste accrédité HERALDO de se construire un profil professionnel public consultable par les institutions (pour le ciblage) et par les confrères (pour le réseau). Le profil met en valeur ses spécialités, ses publications récentes, son expérience. C'est sa vitrine professionnelle HERALDO.
+2.2 Schéma de base de données
+Extension de la table journalists existante
+Ajouts aux colonnes existantes dans la table journalists :
+Nouvelle colonne
+Type
+Description
+profile_photo_url
+TEXT NULL
+Photo de profil HD
+cover_photo_url
+TEXT NULL
+Bannière de couverture
+bio
+TEXT NULL
+Bio courte (max 500 caractères)
+years_experience
+INTEGER NULL
+Années d'expérience journalistique
+current_employer_id
+UUID FK media_outlets.id NULL
+Média employeur actuel
+previous_employers
+JSONB DEFAULT '[]'
+[{name, from, to, role}] historique
+education
+JSONB DEFAULT '[]'
+[{school, diploma, year}]
+awards
+JSONB DEFAULT '[]'
+[{name, year, description}]
+specialties
+VARCHAR[] DEFAULT '{}'
+Tags spécialités : politique, économie, sport...
+languages_spoken
+VARCHAR[] DEFAULT '{}'
+fr, en, baoulé, dioula, etc.
+zones_covered
+VARCHAR[] DEFAULT '{}'
+Zones géographiques : Abidjan, Yamoussoukro...
+website_url
+TEXT NULL
+Site perso ou blog
+twitter_handle
+VARCHAR(100) NULL
+@handle
+linkedin_url
+TEXT NULL
+
+instagram_handle
+VARCHAR(100) NULL
+
+profile_visibility
+ENUM DEFAULT 'public'
+public | institutions_only | private
+profile_slug
+VARCHAR(100) UNIQUE
+URL publique : /j/prenom-nom-123
+profile_completion_pct
+INTEGER DEFAULT 0
+% de complétion du profil (gamification)
+
+Nouvelle table journalist_publications — Portfolio auto-alimenté
+Centralise toutes les publications détectées du journaliste, qu'elles viennent du FCM HERALDO ou que le journaliste les ajoute manuellement.
+Champ
+Type
+Description
+id
+UUID PK
+
+journalist_id
+UUID FK journalists.id
+
+title
+VARCHAR(500)
+Titre de l'article/reportage
+media_outlet_id
+UUID FK media_outlets.id NULL
+Média où publié
+media_outlet_name_raw
+VARCHAR(300) NULL
+Si média non référencé
+publication_type
+ENUM
+article_written | tv_report | radio_report | video | podcast | investigation
+url
+TEXT NULL
+Lien public si applicable
+preview_image_url
+TEXT NULL
+Image de prévisualisation
+excerpt
+TEXT NULL
+Extrait 300 caractères
+published_at
+DATE
+Date de publication
+source_type
+ENUM
+fcm_proof | manual_entry | auto_detected
+fcm_transaction_id
+UUID FK fcm_transactions.id NULL
+Si via FCM HERALDO
+tags
+VARCHAR[] DEFAULT '{}'
+Tags thématiques
+is_featured
+BOOLEAN DEFAULT false
+Mise en avant sur profil public
+is_public
+BOOLEAN DEFAULT true
+Visible sur profil public
+created_at
+TIMESTAMP
+
+
+Index : INDEX (journalist_id, published_at DESC), INDEX (journalist_id, is_featured, is_public)
+2.3 Endpoints API — Préfixe /v1/journalist-profile
+Endpoint
+Description
+GET /v1/journalist-profile/me
+Récupère son propre profil complet
+PATCH /v1/journalist-profile/me
+Met à jour son profil
+POST /v1/journalist-profile/me/photo
+Upload photo profil ou cover
+GET /v1/journalist-profile/public/{slug}
+Profil public consultable (respecte profile_visibility)
+GET /v1/journalist-profile/me/publications
+Liste de ses publications
+POST /v1/journalist-profile/me/publications
+Ajoute manuellement une publication
+PATCH /v1/journalist-profile/me/publications/{id}
+Modifie une publication
+DELETE /v1/journalist-profile/me/publications/{id}
+Supprime une publication (manual_entry uniquement)
+PATCH /v1/journalist-profile/me/publications/{id}/feature
+Mettre en avant sur profil
+GET /v1/journalist-profile/me/completion
+Détail du % de complétion avec suggestions
+
+2.4 Gamification du profil
+Pour inciter au remplissage complet, un score de complétion avec bénéfices :
+Niveau
+Complétion
+Avantages débloqués
+Débutant
+0–30%
+Accès de base à l'app
+Accrédité
+31–60%
+Profil apparaît dans l'annuaire
+Confirmé
+61–85%
+Badge « Confirmé », visibilité accrue dans ciblage institutions
+Référent
+86–100%
+Badge « Référent », priorité sur invitations salles AGORA
+
+Calcul du pourcentage basé sur la présence de :
+Photo de profil (10 pts)
+Bio remplie (10 pts)
+Années d'expérience (5 pts)
+Employeur actuel (10 pts)
+Au moins 3 spécialités (10 pts)
+Au moins 2 langues (5 pts)
+Au moins 1 zone géographique (5 pts)
+Au moins 1 expérience passée (10 pts)
+Au moins 1 formation (5 pts)
+Au moins 3 publications dans le portfolio (20 pts)
+Coordonnées Mobile Money configurées (10 pts)
+2.5 Règles de gestion
+RG-JPROF-01 : Un journaliste ne peut modifier son profil qu'en étant authentifié sur son compte. Aucune modification par un tiers autorisée.
+RG-JPROF-02 : Les publications source=fcm_proof sont créées automatiquement lors de la validation d'une preuve FCM. Le journaliste peut seulement les masquer (is_public=false), pas les supprimer.
+RG-JPROF-03 : Le slug public est généré automatiquement à la création du compte journaliste, format slug(prenom-nom)-6chars. Modifiable une seule fois ensuite.
+RG-JPROF-04 : Les institutions clientes voient uniquement les champs publics du profil dans leur interface de ciblage. Pas de téléphone, pas d'email perso, pas de Mobile Money.
+RG-JPROF-05 : Le champ previous_employers est limité à 10 entrées pour éviter les profils surchargés.
+
+3. MODULE J2 — AGENDA (CALENDRIER PERSONNEL PRESSE)
+
+3.1 Objectif fonctionnel
+Centraliser dans l'app tous les événements professionnels du journaliste : invitations HERALDO (salles AGORA à venir), événements qu'il ajoute manuellement (conférences de presse externes, rendez-vous avec sources, échéances de bouclage). Vue calendaire avec synchronisation optionnelle vers Google Calendar / iCal.
+3.2 Schéma de base de données
+Table journalist_agenda_items
+Champ
+Type
+Description
+id
+UUID PK
+
+journalist_id
+UUID FK journalists.id
+
+title
+VARCHAR(300)
+
+description
+TEXT NULL
+
+event_type
+ENUM
+agora_room | press_conference | interview_source | deadline | event_other | personal_note
+location
+VARCHAR(500) NULL
+Lieu physique ou virtuel
+location_coords
+POINT NULL
+Coordonnées GPS si applicable
+starts_at
+TIMESTAMP
+
+ends_at
+TIMESTAMP NULL
+
+all_day
+BOOLEAN DEFAULT false
+
+linked_agora_room_id
+UUID FK agora_rooms.id NULL
+Si importé d'une invitation
+linked_source_id
+UUID FK journalist_sources.id NULL
+Si rendez-vous avec source
+reminder_minutes_before
+INTEGER[] DEFAULT '{1440,60}'
+Rappels : 24h avant, 1h avant
+notes
+TEXT NULL
+Notes préparatoires (privées)
+status
+ENUM DEFAULT 'planned'
+planned | attended | missed | cancelled
+color
+VARCHAR(7) NULL
+Code couleur custom (#RRGGBB)
+created_at
+TIMESTAMP
+
+updated_at
+TIMESTAMP
+
+
+Index : INDEX (journalist_id, starts_at), INDEX (journalist_id, event_type, starts_at)
+3.3 Endpoints API — Préfixe /v1/journalist-agenda
+Endpoint
+Description
+GET /v1/journalist-agenda/items
+Liste items avec filtres date_from, date_to, event_type
+POST /v1/journalist-agenda/items
+Crée un item personnel
+GET /v1/journalist-agenda/items/{id}
+Détail
+PATCH /v1/journalist-agenda/items/{id}
+Modifie
+DELETE /v1/journalist-agenda/items/{id}
+Supprime
+POST /v1/journalist-agenda/items/{id}/mark-attended
+Marque comme assisté
+POST /v1/journalist-agenda/items/{id}/mark-missed
+Marque comme manqué
+GET /v1/journalist-agenda/ical-export
+Export iCal (.ics) pour abonnement externe
+GET /v1/journalist-agenda/today
+Événements du jour
+GET /v1/journalist-agenda/upcoming
+Les 7 prochains jours
+
+3.4 Import automatique des invitations HERALDO
+Lorsqu'une invitation à une salle AGORA est envoyée à un journaliste accrédité, un trigger PostgreSQL ou listener NestJS crée automatiquement un item dans son agenda :
+
+Pseudocode du trigger :
+ON INSERT INTO agora_room_invitations:
+  IF invitation.journalist_id IS NOT NULL:
+    INSERT INTO journalist_agenda_items (
+      journalist_id = invitation.journalist_id,
+      title = 'AGORA — ' + agora_room.title,
+      event_type = 'agora_room',
+      starts_at = agora_room.scheduled_at,
+      ends_at = agora_room.scheduled_at + agora_room.duration,
+      linked_agora_room_id = agora_room.id,
+      status = 'planned'
+    )
+3.5 Synchronisation externe (optionnelle)
+Le journaliste peut s'abonner à son agenda HERALDO depuis ses propres applications :
+URL iCal permanente : https://api.heraldo-press.ci/v1/journalist-agenda/ical/{token}.ics
+Token privé généré à l'activation, régénérable à la demande
+Abonnement possible depuis Google Calendar, Apple Calendar, Outlook
+Pas de synchronisation bidirectionnelle — export uniquement pour simplicité
+
+4. MODULE J3 — CARNET (CARNET DE SOURCES PERSONNEL)
+
+4.1 Objectif fonctionnel
+Permettre au journaliste de constituer et gérer son carnet d'adresses personnel dans l'app HERALDO. Les sources ne sont JAMAIS visibles d'HERALDO (stockage local chiffré sur le device + sauvegarde chiffrée côté serveur optionnelle). C'est un outil métier 100% privé du journaliste.
+4.2 Architecture de stockage
+Double stockage avec contrôle utilisateur :
+Mode
+Description
+Niveau de confidentialité
+Local only
+SQLite chiffré sur le device uniquement
+MAXIMUM — HERALDO ne voit jamais les données
+Local + Cloud backup
+SQLite local + sauvegarde chiffrée E2E dans HERALDO (clé dérivée du mot de passe)
+ÉLEVÉ — HERALDO stocke mais ne peut pas lire
+
+Recommandation : mode par défaut = Local + Cloud backup pour prévenir la perte en cas de vol du téléphone.
+4.3 Schéma de base de données locale SQLite
+Table journalist_sources dans SQLite local du téléphone :
+Champ
+Type
+Description
+id
+TEXT (UUID) PK
+
+full_name
+TEXT
+
+nickname
+TEXT
+Surnom (ex: « M. Politique »)
+category
+TEXT
+politique | institutionnel | expert | témoin | anonyme | autre
+organization
+TEXT
+Organisation
+role
+TEXT
+Fonction
+phone_primary
+TEXT
+Chiffré AES-256
+phone_secondary
+TEXT
+Chiffré AES-256
+whatsapp
+TEXT
+Chiffré
+email
+TEXT
+Chiffré
+address
+TEXT
+Chiffré
+zones_of_expertise
+TEXT[]
+Sujets sur lesquels la source est pertinente
+reliability_score
+INTEGER
+1-5 (évaluation personnelle du journaliste)
+relationship_notes
+TEXT
+Notes privées — chiffrées
+last_contacted_at
+DATE
+
+first_met_at
+DATE
+
+tags
+TEXT[]
+Tags libres
+is_archived
+INTEGER DEFAULT 0
+Archivée
+created_at
+INTEGER
+Timestamp epoch
+updated_at
+INTEGER
+
+
+4.4 Table locale journalist_source_interactions
+Historique des contacts avec chaque source :
+Champ
+Type
+Description
+id
+TEXT PK
+
+source_id
+TEXT FK journalist_sources.id
+
+interaction_type
+TEXT
+call | meeting | whatsapp | email | interview_recorded
+occurred_at
+INTEGER
+Timestamp
+duration_minutes
+INTEGER NULL
+
+topic
+TEXT
+Sujet abordé
+summary
+TEXT
+Résumé — chiffré
+linked_publication_id
+TEXT NULL
+Article résultant
+linked_recording_id
+TEXT NULL
+Enregistrement audio si applicable
+
+4.5 Chiffrement et sauvegarde cloud optionnelle
+Chiffrement local
+Base SQLite chiffrée via SQLCipher ou équivalent.
+Clé de chiffrement dérivée du mot de passe HERALDO de l'utilisateur via PBKDF2 (100 000 itérations, SHA-256).
+Clé jamais stockée en clair, régénérée à chaque session à partir du mot de passe saisi.
+Sauvegarde cloud (si opt-in)
+À chaque modification, push différentiel chiffré vers /v1/journalist/sources-backup.
+Payload = blob chiffré AES-256 côté client, envoyé opaque au serveur.
+Serveur stocke le blob sans jamais pouvoir le déchiffrer (pas de clé côté serveur).
+En cas de changement d'appareil, déchiffrement uniquement possible avec le mot de passe correct.
+4.6 Endpoints API — Préfixe /v1/journalist/sources-backup
+Les endpoints manipulent exclusivement des blobs chiffrés opaques :
+Endpoint
+Description
+POST /v1/journalist/sources-backup/push
+Envoie un blob chiffré (full ou delta)
+GET /v1/journalist/sources-backup/pull
+Récupère le dernier blob chiffré en date
+GET /v1/journalist/sources-backup/versions
+Liste versions (pour restauration point-in-time)
+DELETE /v1/journalist/sources-backup
+Supprime définitivement la sauvegarde cloud (demande RGPD)
+
+4.7 Règles de gestion critiques
+RG-CARNET-01 : Les données du carnet de sources ne sont JAMAIS transmises à un tiers (institutions clientes, autres journalistes, Admin HERALDO). Cela doit être garanti techniquement et contractuellement.
+RG-CARNET-02 : Le journaliste peut à tout moment exporter son carnet dans un format standard (vCard, CSV chiffré) pour portabilité.
+RG-CARNET-03 : En cas de désabonnement ou suppression de compte, le journaliste reçoit son export avant la suppression des blobs chiffrés cloud.
+RG-CARNET-04 : Aucun Admin HERALDO ne peut déchiffrer ces blobs, même sur réquisition judiciaire (cryptographiquement impossible par conception). Cet argument doit être mis en avant commercialement.
+
+5. MODULE J4 — CAPTURE (ENREGISTREUR AUDIO AVEC TRANSCRIPTION NATIVE)
+
+5.1 Objectif fonctionnel
+Permettre au journaliste d'enregistrer des interviews terrain, réunions, conférences de presse directement depuis l'app HERALDO avec transcription automatique par la reconnaissance vocale NATIVE du téléphone (gratuite, locale, sans appel API externe). Stockage local avec sauvegarde cloud optionnelle.
+5.2 Technologies utilisées — Gratuites
+Plateforme
+API native
+Coût
+Qualité fr
+iOS
+SFSpeechRecognizer (iOS 10+)
+Gratuit, local
+Très bonne
+Android
+SpeechRecognizer (Android 8+)
+Gratuit, local
+Bonne
+Enregistrement audio iOS
+AVAudioRecorder
+Gratuit
+—
+Enregistrement audio Android
+MediaRecorder
+Gratuit
+—
+
+Fallback Whisper OpenAI : uniquement si le journaliste le demande explicitement (qualité supérieure mais coût 6 FCFA/minute). Opt-in explicite avec confirmation de charge.
+5.3 Schéma de base de données locale
+Table journalist_recordings (SQLite local)
+Champ
+Type
+Description
+id
+TEXT PK
+
+title
+TEXT
+Titre donné par journaliste
+source_id
+TEXT FK journalist_sources.id NULL
+Interviewé si source connue
+recorded_at
+INTEGER
+Timestamp début
+duration_seconds
+INTEGER
+
+audio_file_path
+TEXT
+Chemin fichier local (m4a pour iOS, aac pour Android)
+audio_file_size_bytes
+INTEGER
+
+transcription_text
+TEXT
+Transcription automatique — chiffrée
+transcription_status
+TEXT
+pending | in_progress | completed | failed
+transcription_language
+TEXT
+fr-FR par défaut
+transcription_method
+TEXT
+native | whisper
+linked_event_id
+TEXT NULL
+Lien vers agenda item
+linked_publication_id
+TEXT NULL
+Article résultant
+tags
+TEXT[]
+
+is_backed_up
+INTEGER DEFAULT 0
+Sauvegardé cloud ?
+created_at
+INTEGER
+
+
+5.4 Flux d'enregistrement
+Séquence d'exécution côté app :
+1. Journaliste tape bouton « Nouvel enregistrement »
+2. Demande permission microphone (si pas déjà accordée)
+3. Démarrage AVAudioRecorder (iOS) ou MediaRecorder (Android)
+4. Parallèlement, démarrage SFSpeechRecognizer / SpeechRecognizer pour transcription live
+5. Affichage écran enregistrement : timer, niveau audio visualisé, bouton pause, bouton stop
+6. Transcription partielle visible en temps réel (confiance variable)
+7. Au stop : sauvegarde fichier audio en local + finalisation transcription
+8. Écran post-enregistrement : renommer, ajouter tags, lier à une source / événement, modifier la transcription
+9. Si opt-in backup : upload chiffré vers /v1/journalist/recordings-backup
+5.5 Fonctionnalités d'exploitation
+**Lecture audio** : player standard avec vitesse 0.5x à 2x, navigation par timestamps.
+**Recherche dans transcriptions** : full-text local SQLite FTS5 sur l'ensemble des transcriptions.
+**Highlights** : le journaliste peut marquer des passages clés dans la transcription (timestamp + note).
+**Export** : transcription en txt, srt (sous-titres), doc Word ; audio en m4a.
+**Partage** : envoi d'un extrait (highlight) à un confrère via messagerie interne.
+5.6 Règles éthiques et légales
+L'enregistrement d'une conversation implique des obligations légales. L'app doit rappeler ces obligations à chaque démarrage d'enregistrement via un bandeau d'information, et historiser l'acceptation par le journaliste.
+
+RG-CAPTURE-01 : L'app affiche à chaque lancement d'enregistrement un bandeau rappelant que le journaliste doit idéalement informer son interlocuteur et respecter la législation ivoirienne en vigueur.
+RG-CAPTURE-02 : Le fichier audio et la transcription sont propriété exclusive du journaliste, jamais exploitables par HERALDO.
+RG-CAPTURE-03 : Option « mode discrétion » : enregistrement sans affichage visible à l'écran (icône notification discrète uniquement). Cette option est désactivée par défaut et nécessite activation consciente.
+RG-CAPTURE-04 : Suppression = suppression définitive du fichier audio local + blob cloud. Pas de conservation.
+5.7 Gestion du stockage local
+Les fichiers audio peuvent devenir volumineux. Stratégie :
+Compression AAC 64 kbps par défaut (qualité voix acceptable, 28 Mo par heure).
+Limite par défaut : 20 enregistrements cumulés ou 2 Go, puis alerte utilisateur.
+Option d'archivage automatique : enregistrements > 90 jours déplacés vers cloud, libérés en local (si backup actif).
+
+6. MODULE J5 — ARCHIVES (BIBLIOTHÈQUE PERSONNELLE DE PUBLICATIONS)
+
+6.1 Objectif fonctionnel
+Bibliothèque consolidée de toutes les publications du journaliste : celles soumises via le FCM HERALDO, celles ajoutées manuellement, celles détectées automatiquement via scraping des médias CI où il écrit. Centralise son patrimoine éditorial avec recherche full-text, tags, exports.
+6.2 Schéma de base de données
+Réutilise la table journalist_publications définie en module J1. Extension avec une table de tags et de notes personnelles :
+Table journalist_publication_notes (privées)
+Champ
+Type
+Description
+id
+UUID PK
+
+publication_id
+UUID FK journalist_publications.id
+
+journalist_id
+UUID FK journalists.id
+
+note_type
+ENUM
+backstory | source_reference | update | follow_up
+content
+TEXT
+Contenu note (chiffré si sensible)
+is_private
+BOOLEAN DEFAULT true
+
+created_at
+TIMESTAMP
+
+
+6.3 Détection automatique des publications du journaliste
+Pour auto-alimenter le portfolio sans effort du journaliste, HERALDO peut détecter ses publications sur les sites de presse CI qu'il a déclarés dans son profil.
+Algorithme de détection
+Worker quotidien parcourt les 50 sites de presse CI scrapés par HERALDO (déjà en base pour autres usages).
+Recherche de la signature du journaliste (nom complet + variations orthographiques) dans les champs auteur des articles publiés.
+Si match : création auto d'une entrée journalist_publications avec source_type='auto_detected' et is_public=true par défaut.
+Notification push au journaliste : « Nouvelle publication détectée : [titre] dans [média]. »
+Le journaliste peut valider, modifier ou supprimer l'entrée.
+6.4 Endpoints API — Préfixe /v1/journalist/archives
+Endpoint
+Description
+GET /v1/journalist/archives
+Liste paginée avec filtres (year, tag, media, type)
+GET /v1/journalist/archives/search
+Recherche full-text (query)
+GET /v1/journalist/archives/{id}
+Détail d'une publication
+POST /v1/journalist/archives
+Ajout manuel
+PATCH /v1/journalist/archives/{id}
+Modification
+DELETE /v1/journalist/archives/{id}
+Suppression (manual uniquement)
+POST /v1/journalist/archives/{id}/notes
+Ajoute une note privée
+GET /v1/journalist/archives/stats
+Statistiques : total publications, par année, par média
+GET /v1/journalist/archives/export
+Export PDF CV éditorial ou CSV complet
+
+6.5 CV éditorial généré
+Feature très demandée : génération automatique d'un CV éditorial PDF à partir du portfolio, que le journaliste peut partager sur LinkedIn, remettre à un recruteur, ou envoyer à une institution qui hésite à l'inviter.
+En-tête : photo + nom + employeur actuel + spécialités
+Statistiques : X années d'expérience, Y publications, Z médias différents
+Top 10 publications featured
+Répartition par thématiques (camembert)
+Évolution volume annuel (barres)
+Contact : coordonnées professionnelles configurées
+
+7. MODULE J6 — REVENUS (DASHBOARD FCM PERSONNEL)
+
+7.1 Objectif fonctionnel
+Tableau de bord synthétique et détaillé des revenus FCM perçus par le journaliste via HERALDO. Utile pour suivi financier personnel, déclarations fiscales, et comme argument de fidélisation (« HERALDO vous a rapporté X millions FCFA cette année »).
+7.2 Vues disponibles
+Vue
+Contenu
+Dashboard principal
+KPIs : total perçu vie, année en cours, mois en cours. Graphique évolution mensuelle 12 mois.
+Vue par événement
+Liste des événements FCM avec montant gagné, institution, date, statut de preuve
+Vue par institution
+Total perçu par client HERALDO (Maire de X : 450k, Ministère Y : 280k...)
+Vue fiscale
+Export Excel annuel : date, institution, montant brut, commission HERALDO, montant net, moyen de paiement
+Prévisions
+Montants en attente de validation + montants en cours de preuve
+
+7.3 Schéma de base de données — Réutilise fcm_transactions existante
+La table fcm_transactions existante (définie dans CDC-HERALDO-001) contient déjà toutes les données nécessaires. Pas de nouvelle table, seulement de nouvelles vues et endpoints.
+7.4 Endpoints API — Préfixe /v1/journalist/revenues
+Endpoint
+Description
+GET /v1/journalist/revenues/dashboard
+KPI agrégés pour le dashboard principal
+GET /v1/journalist/revenues/by-event
+Liste paginée transactions par événement
+GET /v1/journalist/revenues/by-institution
+Agrégation par institution cliente
+GET /v1/journalist/revenues/pending
+Montants en attente (preuves en validation)
+GET /v1/journalist/revenues/fiscal-export
+Export Excel/PDF pour déclaration fiscale (param : year)
+GET /v1/journalist/revenues/chart
+Données pour graphique évolution (param : period=12months|year|all)
+
+7.5 Alertes et notifications revenues
+Notification push : « Paiement FCM reçu de [institution] : [montant] FCFA. Voir le détail. »
+Récapitulatif mensuel automatique (1er du mois) : « En [mois passé], vous avez perçu [montant] FCFA via HERALDO sur [nb] publications. »
+Rappel annuel : « Votre export fiscal [année] est disponible. Pensez à le conserver pour votre déclaration. »
+Milestone fidélisation : « Vous avez dépassé 1 million FCFA de revenus HERALDO ! Merci de votre fidélité. »
+
+8. MODULE J7 — ANNUAIRE (RÉPERTOIRE DES JOURNALISTES ACCRÉDITÉS)
+
+8.1 Objectif fonctionnel
+Permettre aux journalistes accrédités HERALDO de se découvrir mutuellement via un annuaire professionnel consultable uniquement entre journalistes. Favorise les collaborations, le partage d'informations, le networking professionnel. Alternative à LinkedIn spécialisée presse ouest-africaine.
+8.2 Accès et confidentialité
+Accessible uniquement aux journalistes accrédités HERALDO (pas aux institutions, pas au grand public).
+Respecte le champ profile_visibility : si 'private', pas listé dans l'annuaire.
+Chaque journaliste peut opt-in ou opt-out de l'annuaire à tout moment.
+Les coordonnées personnelles (téléphone, email perso) ne sont jamais affichées dans l'annuaire. Seul un bouton « Envoyer un message HERALDO » (via messagerie interne du module J8) est disponible.
+8.3 Fonctionnalités de recherche
+Critère
+Description
+Recherche texte
+Nom, prénom, média, bio
+Filtre spécialité
+Politique, économie, sport, culture, société, international...
+Filtre zone géographique
+Abidjan, Yamoussoukro, Bouaké, San Pedro, etc. + toute la CI, puis UEMOA
+Filtre type de média
+Presse écrite, radio, TV, web, podcast
+Filtre langue
+Français, anglais, langues locales
+Filtre années d'expérience
+Junior (0-3 ans), Confirmé (4-10), Sénior (10+)
+Tri
+Alphabétique | Popularité | Activité récente | Score de complétion
+
+8.4 Endpoints API — Préfixe /v1/journalist-directory
+Endpoint
+Description
+GET /v1/journalist-directory/search
+Recherche paginée avec tous filtres ci-dessus
+GET /v1/journalist-directory/{slug}
+Profil public d'un confrère
+POST /v1/journalist-directory/{id}/follow
+Suit un confrère (notifications de ses nouvelles publications)
+DELETE /v1/journalist-directory/{id}/follow
+Se désabonne
+GET /v1/journalist-directory/me/followers
+Liste des journalistes qui nous suivent
+GET /v1/journalist-directory/me/following
+Liste des journalistes qu'on suit
+GET /v1/journalist-directory/trending
+Journalistes les plus actifs du mois
+
+8.5 Table journalist_follows
+Champ
+Type
+Description
+id
+UUID PK
+
+follower_id
+UUID FK journalists.id
+
+followed_id
+UUID FK journalists.id
+
+notifications_enabled
+BOOLEAN DEFAULT true
+
+created_at
+TIMESTAMP
+
+
+Index : UNIQUE (follower_id, followed_id), INDEX (followed_id)
+
+9. MODULE J8 — FORUM (ESPACES D'ÉCHANGES PAR SPÉCIALITÉ)
+
+9.1 Objectif fonctionnel
+Créer des espaces de discussion entre journalistes accrédités HERALDO, organisés par spécialité éditoriale. Favorise l'entraide, le partage de bonnes pratiques, les opportunités professionnelles, les alertes de terrain (ex: manifestation en cours dans un quartier). Modération par l'équipe HERALDO + modérateurs désignés.
+9.2 Structure des espaces
+10 espaces par défaut à la création de la plateforme :
+#general — Discussions générales
+#politique — Vie politique CI et UEMOA
+#economie — Business, finance, entreprises
+#société — Société, faits divers, éducation
+#sport — Football, tous sports
+#culture — Musique, cinéma, arts, mode
+#international — Afrique, monde
+#technique — Outils de travail, méthodes, équipement
+#opportunites — Emplois, pigues, formations, appels à candidature
+#alertes-terrain — Événements en cours, breaking news, entraide
+9.3 Schéma de base de données
+Table forum_channels
+Champ
+Type
+Description
+id
+UUID PK
+
+slug
+VARCHAR(100) UNIQUE
+Ex: 'politique'
+name
+VARCHAR(200)
+Nom affiché
+description
+TEXT
+
+icon
+VARCHAR(10)
+Emoji identifiant
+is_official
+BOOLEAN DEFAULT true
+Canal créé par HERALDO ou par user
+created_by_id
+UUID FK journalists.id NULL
+
+moderators_ids
+UUID[]
+Liste journalistes modérateurs
+members_count
+INTEGER DEFAULT 0
+Cache du nombre d'abonnés
+posts_count
+INTEGER DEFAULT 0
+Cache du nombre de posts
+created_at
+TIMESTAMP
+
+
+Table forum_posts
+Champ
+Type
+Description
+id
+UUID PK
+
+channel_id
+UUID FK forum_channels.id
+
+author_id
+UUID FK journalists.id
+
+title
+VARCHAR(300) NULL
+Titre (optionnel pour posts courts)
+content
+TEXT
+Contenu (Markdown autorisé, hyperliens, mentions)
+attached_media_urls
+TEXT[]
+Images, vidéos
+mentioned_journalist_ids
+UUID[]
+Journalistes @mentionnés
+reactions
+JSONB DEFAULT '{}'
+{👍: 12, ❤️: 3, 🔥: 2}
+replies_count
+INTEGER DEFAULT 0
+Cache
+is_pinned
+BOOLEAN DEFAULT false
+Épinglé par modo
+is_locked
+BOOLEAN DEFAULT false
+Fermé aux nouvelles réponses
+is_removed
+BOOLEAN DEFAULT false
+Supprimé par modération
+removal_reason
+TEXT NULL
+
+created_at
+TIMESTAMP
+
+updated_at
+TIMESTAMP
+
+
+Table forum_replies
+Champ
+Type
+Description
+id
+UUID PK
+
+post_id
+UUID FK forum_posts.id
+
+parent_reply_id
+UUID FK forum_replies.id NULL
+Si réponse à une réponse
+author_id
+UUID FK journalists.id
+
+content
+TEXT
+
+mentioned_journalist_ids
+UUID[]
+
+reactions
+JSONB DEFAULT '{}'
+
+is_removed
+BOOLEAN DEFAULT false
+
+created_at
+TIMESTAMP
+
+
+9.4 Endpoints API — Préfixe /v1/forum
+Endpoint
+Description
+GET /v1/forum/channels
+Liste des canaux avec cache d'abonnés/posts
+POST /v1/forum/channels/{id}/join
+S'abonne à un canal
+DELETE /v1/forum/channels/{id}/join
+Se désabonne
+GET /v1/forum/channels/{id}/posts
+Liste posts paginée (tri : récent | populaire | épinglé)
+POST /v1/forum/channels/{id}/posts
+Crée un post
+GET /v1/forum/posts/{id}
+Détail post + réponses
+PATCH /v1/forum/posts/{id}
+Édite son propre post
+DELETE /v1/forum/posts/{id}
+Supprime son propre post
+POST /v1/forum/posts/{id}/react
+Ajoute une réaction (body : emoji)
+DELETE /v1/forum/posts/{id}/react
+Retire sa réaction
+POST /v1/forum/posts/{id}/replies
+Répond à un post
+POST /v1/forum/posts/{id}/report
+Signale (body : reason)
+POST /v1/forum/posts/{id}/pin
+Épingle (modos uniquement)
+POST /v1/forum/posts/{id}/lock
+Verrouille (modos uniquement)
+POST /v1/forum/posts/{id}/remove
+Supprime en modération
+
+9.5 Règles de modération
+RG-FORUM-01 : Tout post peut être signalé par un journaliste via bouton « Signaler ». 3 signalements distincts = revue automatique par modération HERALDO dans les 24h.
+RG-FORUM-02 : Contenu interdit : diffamation, haine, publicité, partage d'informations personnelles de sources. Suppression immédiate.
+RG-FORUM-03 : Un journaliste peut être suspendu du forum (sans perdre son accréditation HERALDO) après 3 posts supprimés en 30 jours.
+RG-FORUM-04 : Les posts du canal #alertes-terrain sont automatiquement notifiés par push aux journalistes de la zone géographique concernée (opt-out possible).
+RG-FORUM-05 : Les posts supérieurs à 30 jours sont automatiquement archivés (toujours lisibles mais non listés par défaut dans le feed).
+
+10. MODULE J9 — NOTIFICATIONS (SYSTÈME UNIFIÉ ENRICHI)
+
+10.1 Objectif fonctionnel
+Centraliser toutes les notifications entrantes du journaliste dans un flux unifié, avec préférences granulaires par type, et canaux multiples (push app, email, SMS pour les urgentes). Le journaliste contrôle totalement ce qu'il reçoit et comment.
+10.2 Types de notifications
+Type
+Exemple
+Canal par défaut
+invitation_agora
+« Mairie de Cocody vous invite à une salle AGORA »
+push + email
+reminder_agora
+« Votre salle AGORA commence dans 1h »
+push
+fcm_payment_received
+« Paiement FCM de 8 500 FCFA reçu »
+push
+fcm_proof_validated
+« Votre preuve de couverture est validée »
+push
+fcm_proof_rejected
+« Votre preuve a été rejetée — motif : ... »
+push + email
+publication_detected
+« Nouvelle publication détectée : [titre] »
+push
+forum_mention
+« @VousAvezMentionné dans #politique »
+push
+forum_reply
+« Réponse à votre post dans #general »
+push
+new_follower
+« [Nom] vous suit désormais »
+push (désactivable)
+follower_published
+« [Nom] a publié un nouvel article »
+email hebdo
+alerte_terrain_zone
+« Alerte terrain dans votre zone »
+push urgent
+monthly_revenue_summary
+« Récapitulatif revenus du mois »
+email
+system_maintenance
+« Maintenance programmée ce soir 22h »
+push + email
+
+10.3 Schéma de base de données
+Table journalist_notifications
+Champ
+Type
+Description
+id
+UUID PK
+
+journalist_id
+UUID FK journalists.id
+
+type
+ENUM
+Voir types ci-dessus
+title
+VARCHAR(300)
+
+body
+TEXT
+
+payload
+JSONB
+Données structurées pour routage (entity_type, entity_id)
+priority
+ENUM DEFAULT 'normal'
+low | normal | high | urgent
+channels_sent
+ENUM[]
+['push', 'email', 'sms']
+status
+ENUM DEFAULT 'unread'
+unread | read | archived
+read_at
+TIMESTAMP NULL
+
+created_at
+TIMESTAMP
+
+
+Index : INDEX (journalist_id, status, created_at DESC), INDEX (journalist_id, type)
+Table journalist_notification_preferences
+Champ
+Type
+Description
+journalist_id
+UUID PK FK journalists.id
+Une ligne par journaliste
+preferences
+JSONB
+{notification_type: {push: bool, email: bool, sms: bool}}
+do_not_disturb_start
+TIME NULL
+Ex: 22:00
+do_not_disturb_end
+TIME NULL
+Ex: 07:00
+urgent_override_dnd
+BOOLEAN DEFAULT true
+Alertes urgentes passent même en DND
+updated_at
+TIMESTAMP
+
+
+10.4 Endpoints API — Préfixe /v1/journalist-notifications
+Endpoint
+Description
+GET /v1/journalist-notifications
+Feed paginé avec filtres : status, type, priority
+GET /v1/journalist-notifications/unread-count
+Nombre de non lues (pour badge UI)
+PATCH /v1/journalist-notifications/{id}/mark-read
+
+POST /v1/journalist-notifications/mark-all-read
+
+DELETE /v1/journalist-notifications/{id}
+Archive
+GET /v1/journalist-notifications/preferences
+Récupère préférences
+PATCH /v1/journalist-notifications/preferences
+Met à jour
+
+
+11. CONSIDÉRATIONS TRANSVERSES
+
+11.1 Architecture partagée avec l'app Attaché
+Les deux apps Journaliste et Attaché partagent un mono-repo Expo React Native avec structure :
+Dossier
+Utilisation
+apps/journalist
+App HÉRALDO Journaliste (ce CDC)
+apps/attache
+App HÉRALDO Attaché (CDC Cockpit)
+packages/shared/ui
+Composants UI communs
+packages/shared/api
+Client API REST HERALDO
+packages/shared/auth
+Authentification JWT
+packages/shared/notifications
+Expo Notifications wrapper
+packages/shared/audio
+Enregistrement + transcription native
+packages/shared/encryption
+Chiffrement local SQLCipher
+packages/shared/sqlite
+Wrapper expo-sqlite typed
+
+11.2 Permissions système à demander
+Permission
+Pour quel module
+Requise au premier usage
+Notifications push
+J9
+Au premier lancement
+Microphone
+J4
+Au premier enregistrement
+Reconnaissance vocale
+J4
+Au premier enregistrement
+Photo / caméra
+J1 (photo profil), J5 (scan carte)
+À l'usage
+Stockage
+J4, J5 (fichiers audio/docs)
+À l'usage
+Contacts
+J3 (import initial optionnel)
+À l'usage
+Géolocalisation
+J2 (events géolocalisés)
+À l'usage
+
+11.3 Mode hors-ligne
+L'app doit rester utilisable en offline pour 80% des cas :
+Carnet de sources (J3) : 100% offline, SQLite local
+Enregistrements audio (J4) : 100% offline, transcription native offline
+Archives de publications (J5) : cache des 50 dernières publications
+Agenda (J2) : cache des 30 prochains événements
+Profil (J1) : consultation offline, modification buffer uploaded au retour
+Revenus (J6) : cache du dashboard principal
+Forum (J8) : cache des 100 derniers posts de chaque canal suivi
+11.4 Métriques d'engagement à suivre
+Métrique
+Cible
+DAU / MAU (Daily/Monthly Active Users)
+> 40% (signal d'usage quotidien)
+Sessions par utilisateur par jour
+> 2 sessions/jour en moyenne
+Complétion moyenne du profil
+> 70% après 30 jours d'usage
+Taux de rétention J+30
+> 80% des journalistes acceptent toujours une invitation 30 jours après 1er usage
+Nombre moyen de sources dans le carnet
+> 50 sources par journaliste actif à 6 mois
+Nombre d'enregistrements audio par mois/user
+> 3 enregistrements/mois pour un journaliste actif
+Participation forum
+> 20% des journalistes postent au moins 1x/mois
+
+11.5 Onboarding en 5 écrans
+Au premier lancement, flux d'onboarding rapide pour valoriser les nouvelles features :
+Écran 1 — « Bienvenue dans HERALDO. Votre outil professionnel quotidien. »
+Écran 2 — « Complétez votre profil public. Les institutions vous trouveront plus facilement. » → direct vers profil
+Écran 3 — « Gérez vos sources en sécurité totale. Aucune donnée ne quitte votre téléphone sans votre accord. » → tutoriel carnet
+Écran 4 — « Enregistrez vos interviews. Transcription instantanée, sans coût. » → démo capture
+Écran 5 — « Rejoignez vos confrères dans les forums par spécialité. » → abonnement canaux
+
+12. PLANNING DE DÉVELOPPEMENT
+
+12.1 Ordonnancement recommandé
+Sprint
+Durée
+Modules
+Justification
+S1
+2 sem
+J1 PROFIL + J9 NOTIFICATIONS
+Rapide, réutilise tables existantes, débloque gamification
+S2
+2 sem
+J2 AGENDA + J6 REVENUS
+Purement backend + UI, pas de dépendance externe
+S3
+3 sem
+J3 CARNET + J5 ARCHIVES
+Chiffrement local, architecture stockage
+S4
+3 sem
+J4 CAPTURE (audio + transcription native)
+Module le plus technique, nécessite tests device
+S5
+2 sem
+J7 ANNUAIRE
+Dépend de J1 terminé
+S6
+3 sem
+J8 FORUM
+Le plus complexe en modération
+
+Total cumulé : 15 semaines en séquentiel, 10-12 semaines en parallélisant S1-S2 et S3-S4 avec 2 développeurs.
+12.2 Livraison progressive aux utilisateurs
+Ne pas attendre la fin pour publier les updates :
+Version 1.1 après S1-S2 : Profil + Notifications + Agenda + Revenus (amélioration immédiate visible)
+Version 1.2 après S3-S4 : Carnet + Archives + Capture (le cœur du pro-utility)
+Version 1.3 après S5-S6 : Annuaire + Forum (dimension réseau)
+12.3 Budget de développement
+Poste
+Coût estimé
+Développement modules J1 + J9
+2 000 000 FCFA
+Développement modules J2 + J6
+2 000 000 FCFA
+Développement modules J3 + J5 (chiffrement local, stockage)
+3 500 000 FCFA
+Développement module J4 (audio natif iOS + Android)
+4 000 000 FCFA
+Développement module J7
+1 500 000 FCFA
+Développement module J8 (forum + modération)
+3 000 000 FCFA
+Design graphique onboarding + écrans nouveaux
+1 500 000 FCFA
+Tests device iOS + Android multi-versions
+1 000 000 FCFA
+TOTAL
+18 500 000 FCFA
+
+12.4 Coûts récurrents par journaliste
+Objectif zéro coût variable — récapitulatif final :
+Poste
+Coût par journaliste par mois
+Stockage backend (profil, publications, agenda, forum)
+~30 FCFA
+Stockage blob chiffré carnet de sources
+~50 FCFA (si opt-in)
+Stockage blob chiffré enregistrements audio
+~200 FCFA (si opt-in, 500 Mo moyen)
+Push notifications
+0 FCFA (gratuit Expo)
+Email notifications
+~10 FCFA
+Transcription audio
+0 FCFA (native OS)
+TOTAL par journaliste
+~290 FCFA/mois = ~3 500 FCFA/an
+
+Le coût opérationnel de 3 500 FCFA/an par journaliste est totalement absorbé par la valeur qu'il génère pour l'écosystème HERALDO via sa participation aux salles AGORA et aux FCM. Zéro coût variable client institution. Retour sur investissement total par l'effet réseau et la qualité du RÉSEAU enrichi.
+
+
+13. VISION UTILISATEUR — LA NOUVELLE JOURNÉE DU JOURNALISTE HERALDO
+
+Pour illustrer l'impact de ces modules, voici la journée type d'un journaliste actif après le déploiement complet :
+Matinée
+7h30 — Réveil. Il ouvre HERALDO sur son téléphone. Dashboard d'accueil : notification d'une invitation AGORA du Ministère de la Santé pour 10h30, rappel d'un rendez-vous source à 15h (depuis AGENDA), 2 nouveaux posts dans #politique (son canal favori), 1 nouveau follower, récapitulatif hebdo de ses revenus FCM de la semaine.
+8h00 — Il consulte le forum #alertes-terrain : un confrère signale une manifestation à Yopougon. Il note mentalement l'info, prend son dictaphone HERALDO au cas où.
+9h30 — Il se rend à un rendez-vous source au Plateau. Pendant le trajet, il consulte le profil HERALDO de la personne qu'il va rencontrer (ANNUAIRE), vérifie sa spécialité, consulte ses publications récentes.
+Mi-journée
+10h30 — Salle AGORA Ministère Santé. Il rejoint depuis l'app. À la fin, il note dans son CARNET DE SOURCES les 3 nouvelles personnes rencontrées pertinentes.
+11h30 — Il rédige son article. Il consulte la transcription partielle de son enregistrement effectué en direct pendant la salle AGORA. Gain de 20 minutes sur la transcription manuelle.
+13h00 — Il soumet sa preuve FCM via l'app. Notification de validation reçue à 15h30, puis paiement reçu à 15h31 sur son Wave. Dashboard REVENUS mis à jour.
+Après-midi
+15h00 — Rendez-vous avec sa source au Plateau. Il lance un enregistrement HERALDO (avec accord verbal de la source, consigné). Transcription automatique en temps réel affichée.
+16h30 — Retour au bureau de sa rédaction. Il rédige un article approfondi en s'appuyant sur les extraits clés qu'il a surlignés dans la transcription (fonction highlights).
+18h00 — Il poste une question dans le forum #technique HERALDO : recommandation d'un bon transcripteur pour un entretien qu'il doit envoyer à l'étranger. Trois confrères lui répondent dans l'heure.
+Soirée
+20h00 — Dîner. Il reçoit une notification : un de ses articles publié la semaine dernière a été automatiquement détecté et ajouté à ses ARCHIVES. Il le met en avant (feature) sur son profil public.
+21h00 — Il consulte l'ANNUAIRE pour trouver un confrère spécialisé en économie : il veut collaborer sur un dossier d'investigation. Il envoie un message direct via la messagerie HERALDO.
+Conclusion
+Le journaliste a ouvert HERALDO environ 8 fois dans sa journée. Il n'imagine plus travailler sans. Son profil, son carnet, ses enregistrements, ses archives, ses revenus, son réseau — tout est centralisé dans un outil qui lui appartient, qui respecte sa vie privée, et qui l'aide à gagner sa vie. C'est exactement le niveau d'engagement qui transforme HERALDO PRESS d'une place de marché fragile en une infrastructure incontournable du paysage médiatique ouest-africain.
+
+
+« Votre message, notre mission. »
+HERALDO PRESS — CDC App Journaliste enrichie — Avril 2026

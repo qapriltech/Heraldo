@@ -21,6 +21,12 @@ import { StudioModule } from './studio/studio.module';
 import { InboxModule } from './inbox/inbox.module';
 import { CrmModule } from './crm/crm.module';
 import { BriefsModule } from './briefs/briefs.module';
+import { JournalistProfileModule } from './journalist-profile/journalist-profile.module';
+import { JournalistAgendaModule } from './journalist-agenda/journalist-agenda.module';
+import { JournalistRevenuesModule } from './journalist-revenues/journalist-revenues.module';
+import { JournalistDirectoryModule } from './journalist-directory/journalist-directory.module';
+import { ForumModule } from './forum/forum.module';
+import { JournalistNotificationsModule } from './journalist-notifications/journalist-notifications.module';
 
 @Module({
   imports: [
@@ -44,6 +50,12 @@ import { BriefsModule } from './briefs/briefs.module';
     InboxModule,
     CrmModule,
     BriefsModule,
+    JournalistProfileModule,
+    JournalistAgendaModule,
+    JournalistRevenuesModule,
+    JournalistDirectoryModule,
+    ForumModule,
+    JournalistNotificationsModule,
   ],
   providers: [
     {
