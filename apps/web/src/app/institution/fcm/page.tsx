@@ -14,11 +14,10 @@ import {
   ArrowDownRight,
   FileCheck,
   AlertTriangle,
-  Newspaper,
   CreditCard,
   Eye,
 } from "lucide-react";
-import Link from "next/link";
+
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
@@ -113,38 +112,19 @@ export default function FCMPage() {
   const [activeTab, setActiveTab] = useState<"pools" | "transactions">("pools");
 
   return (
-    <div className="min-h-screen bg-ivory">
-      <nav className="glass-nav sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg gradient-gold flex items-center justify-center">
-              <Newspaper className="w-4 h-4 text-navy-dark" />
-            </div>
-            <span className="text-lg font-bold text-navy">HERALDO</span>
-          </div>
-          <div className="flex items-center gap-6 text-sm font-medium">
-            <Link href="/dashboard" className="text-warm-gray hover:text-navy transition-colors">Tableau de bord</Link>
-            <Link href="/communiques" className="text-warm-gray hover:text-navy transition-colors">Communiques</Link>
-            <Link href="/agora" className="text-warm-gray hover:text-navy transition-colors">AGORA</Link>
-            <Link href="/fcm" className="text-navy border-b-2 border-gold pb-0.5">FCM</Link>
-          </div>
-        </div>
-      </nav>
-
-      <main className="max-w-7xl mx-auto px-6 py-8">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+    <>
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-navy flex items-center gap-3">
-              <ShieldCheck className="w-8 h-8 text-green" />
-              Fonds de Couverture Mediatique
-            </h1>
-            <p className="text-warm-gray mt-1">Gerez vos pools FCM et suivez les preuves de couverture</p>
+            <h1 className="text-2xl font-extrabold text-navy tracking-tight">Fonds de Couverture Mediatique</h1>
+            <p className="text-warm-gray text-sm mt-1">Gerez vos pools FCM et suivez les preuves de couverture</p>
           </div>
           <Button>
             <Plus className="w-4 h-4" />
             Nouveau pool FCM
           </Button>
         </div>
+      </motion.div>
 
         {/* KPI row */}
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-8">
@@ -235,7 +215,7 @@ export default function FCMPage() {
                       <span>Progression des liberations</span>
                       <span>{Math.round((pool.proofsValidated / pool.proofs) * 100)}%</span>
                     </div>
-                    <div className="w-full bg-ivory rounded-full h-2">
+                    <div className="w-full bg-navy/5 rounded-full h-2">
                       <div
                         className="bg-green rounded-full h-2 transition-all"
                         style={{ width: `${(pool.proofsValidated / pool.proofs) * 100}%` }}
@@ -283,7 +263,6 @@ export default function FCMPage() {
             </div>
           </Card>
         )}
-      </main>
-    </div>
+    </>
   );
 }

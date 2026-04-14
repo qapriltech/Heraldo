@@ -13,7 +13,6 @@ import {
   XCircle,
   Eye,
   MoreHorizontal,
-  Newspaper,
 } from "lucide-react";
 import Link from "next/link";
 import Card from "@/components/ui/Card";
@@ -116,61 +115,21 @@ export default function CommuniquesPage() {
   });
 
   return (
-    <div className="min-h-screen bg-ivory">
-      {/* Navigation */}
-      <nav className="glass-nav sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg gradient-gold flex items-center justify-center">
-              <Newspaper className="w-4 h-4 text-navy-dark" />
-            </div>
-            <span className="text-lg font-bold text-navy">HERALDO</span>
-          </div>
-          <div className="flex items-center gap-6 text-sm font-medium">
-            <Link
-              href="/dashboard"
-              className="text-warm-gray hover:text-navy transition-colors"
-            >
-              Tableau de bord
-            </Link>
-            <Link
-              href="/communiques"
-              className="text-navy border-b-2 border-gold pb-0.5"
-            >
-              Communiques
-            </Link>
-            <Link
-              href="/agora"
-              className="text-warm-gray hover:text-navy transition-colors"
-            >
-              AGORA
-            </Link>
-            <Link
-              href="/fcm"
-              className="text-warm-gray hover:text-navy transition-colors"
-            >
-              FCM
-            </Link>
-          </div>
-        </div>
-      </nav>
-
-      <main className="max-w-7xl mx-auto px-6 py-8">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+    <>
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-navy">Communiques</h1>
-            <p className="text-warm-gray mt-1">
-              Gerez et diffusez vos communiques de presse
-            </p>
+            <h1 className="text-2xl font-extrabold text-navy tracking-tight">Communiques</h1>
+            <p className="text-warm-gray text-sm mt-1">Gerez et diffusez vos communiques de presse</p>
           </div>
-          <Link href="/communiques/new">
+          <Link href="/institution/communiques/new">
             <Button>
               <Plus className="w-4 h-4" />
               Nouveau communique
             </Button>
           </Link>
         </div>
+      </motion.div>
 
         {/* Filters */}
         <Card hover={false} className="mb-6">
@@ -252,7 +211,7 @@ export default function CommuniquesPage() {
                     <Badge variant={cfg.variant} dot>
                       {cfg.label}
                     </Badge>
-                    <button className="p-2 rounded-lg hover:bg-ivory transition-colors cursor-pointer">
+                    <button className="p-2 rounded-lg hover:bg-ivory-dark transition-colors cursor-pointer">
                       <MoreHorizontal className="w-4 h-4 text-warm-gray" />
                     </button>
                   </div>
@@ -273,7 +232,6 @@ export default function CommuniquesPage() {
             </p>
           </div>
         )}
-      </main>
-    </div>
+    </>
   );
 }

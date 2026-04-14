@@ -2,8 +2,6 @@
 
 import { motion } from "framer-motion";
 import {
-  Newspaper,
-  ArrowLeft,
   Mail,
   MessageSquare,
   Search,
@@ -15,7 +13,6 @@ import {
   Inbox,
   Filter,
 } from "lucide-react";
-import Link from "next/link";
 import { useState } from "react";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
@@ -181,45 +178,11 @@ export default function InboxPage() {
   const selected = messages.find((m) => m.id === selectedMessage);
 
   return (
-    <div className="min-h-screen bg-ivory">
-      <nav className="glass-nav sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg gradient-gold flex items-center justify-center">
-              <Newspaper className="w-4 h-4 text-navy-dark" />
-            </div>
-            <span className="text-lg font-bold text-navy">HERALDO</span>
-            <span className="text-sm text-warm-gray ml-2 hidden sm:inline">
-              | Boite de reception
-            </span>
-          </div>
-          <div className="flex items-center gap-4">
-            <Link href="/institution/dashboard">
-              <Button variant="ghost" size="sm">
-                <ArrowLeft className="w-4 h-4" />
-                Tableau de bord
-              </Button>
-            </Link>
-            <div className="w-9 h-9 rounded-full bg-navy text-white flex items-center justify-center text-sm font-semibold">
-              IN
-            </div>
-          </div>
-        </div>
-      </nav>
-
-      <main className="max-w-7xl mx-auto px-6 py-8">
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          <h1 className="text-3xl font-bold text-navy mb-1">
-            Boite de reception
-          </h1>
-          <p className="text-warm-gray">
-            Tous vos messages centralises en un seul endroit.
-          </p>
-        </motion.div>
+    <>
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+        <h1 className="text-2xl font-extrabold text-navy tracking-tight">Boite de reception</h1>
+        <p className="text-warm-gray text-sm mt-1">Tous vos messages centralises en un seul endroit.</p>
+      </motion.div>
 
         {/* Status Filter Tabs */}
         <motion.div
@@ -419,7 +382,6 @@ export default function InboxPage() {
             )}
           </div>
         </div>
-      </main>
-    </div>
+    </>
   );
 }

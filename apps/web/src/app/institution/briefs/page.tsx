@@ -2,8 +2,6 @@
 
 import { motion } from "framer-motion";
 import {
-  Newspaper,
-  ArrowLeft,
   Plus,
   FileText,
   Mic,
@@ -20,7 +18,6 @@ import {
   Sparkles,
   Calendar,
 } from "lucide-react";
-import Link from "next/link";
 import { useState } from "react";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
@@ -133,36 +130,23 @@ export default function BriefsPage() {
   const filtered = mockBriefs.filter(b => statusFilter === "all" || b.status === statusFilter);
 
   return (
-    <div className="min-h-screen gradient-mesh">
-      {/* Nav */}
-      <nav className="glass-nav sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href="/institution/dashboard" className="p-2 hover:bg-navy/5 rounded-xl transition-colors">
-              <ArrowLeft className="w-5 h-5 text-navy" />
-            </Link>
-            <div className="w-8 h-8 rounded-lg gradient-gold flex items-center justify-center">
-              <Newspaper className="w-4 h-4 text-navy-dark" />
+    <>
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <Sparkles className="w-5 h-5 text-gold" />
+              <p className="text-xs font-extrabold text-gold uppercase tracking-[0.2em]">Propulse par Claude AI</p>
             </div>
-            <span className="text-lg font-bold text-navy">Briefs d&apos;interview</span>
+            <h1 className="text-2xl font-extrabold text-navy tracking-tight">Briefs d&apos;interview</h1>
+            <p className="text-warm-gray text-sm mt-1">Questions probables, reponses suggerees, elements de langage et pieges a eviter.</p>
           </div>
           <Button size="sm">
             <Plus className="w-4 h-4" />
             Nouveau brief
           </Button>
         </div>
-      </nav>
-
-      <main className="max-w-5xl mx-auto px-6 py-8">
-        {/* Header */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <Sparkles className="w-5 h-5 text-gold" />
-            <p className="text-xs font-extrabold text-gold uppercase tracking-[0.2em]">Propulse par Claude AI</p>
-          </div>
-          <h1 className="text-3xl font-bold text-navy mb-1">Preparez vos interviews en 5 minutes</h1>
-          <p className="text-warm-gray">Questions probables, reponses suggerees, elements de langage et pieges a eviter — generes automatiquement.</p>
-        </motion.div>
+      </motion.div>
 
         {/* Stats row */}
         <div className="grid grid-cols-4 gap-4 mb-8">
@@ -279,7 +263,6 @@ export default function BriefsPage() {
             );
           })}
         </div>
-      </main>
-    </div>
+    </>
   );
 }

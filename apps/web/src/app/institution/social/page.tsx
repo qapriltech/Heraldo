@@ -2,8 +2,6 @@
 
 import { motion } from "framer-motion";
 import {
-  Newspaper,
-  ArrowLeft,
   Facebook,
   Instagram,
   Linkedin,
@@ -17,6 +15,7 @@ import {
   Calendar,
   CheckCircle2,
   Clock,
+  Newspaper,
   Users,
 } from "lucide-react";
 import Link from "next/link";
@@ -167,45 +166,12 @@ const platformIcon = (name: string) => {
 
 export default function SocialDashboard() {
   return (
-    <div className="min-h-screen bg-ivory">
-      <nav className="glass-nav sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg gradient-gold flex items-center justify-center">
-              <Newspaper className="w-4 h-4 text-navy-dark" />
-            </div>
-            <span className="text-lg font-bold text-navy">HERALDO</span>
-            <span className="text-sm text-warm-gray ml-2 hidden sm:inline">
-              | Reseaux Sociaux
-            </span>
-          </div>
-          <div className="flex items-center gap-4">
-            <Link href="/institution/dashboard">
-              <Button variant="ghost" size="sm">
-                <ArrowLeft className="w-4 h-4" />
-                Tableau de bord
-              </Button>
-            </Link>
-            <div className="w-9 h-9 rounded-full bg-navy text-white flex items-center justify-center text-sm font-semibold">
-              IN
-            </div>
-          </div>
-        </div>
-      </nav>
-
-      <main className="max-w-7xl mx-auto px-6 py-8">
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-4"
-        >
+    <>
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-navy mb-1">
-              Reseaux Sociaux
-            </h1>
-            <p className="text-warm-gray">
-              Gerez vos publications et suivez votre audience.
-            </p>
+            <h1 className="text-2xl font-extrabold text-navy tracking-tight">Reseaux Sociaux</h1>
+            <p className="text-warm-gray text-sm mt-1">Gerez vos publications et suivez votre audience.</p>
           </div>
           <Link href="/institution/social/new">
             <Button>
@@ -213,7 +179,8 @@ export default function SocialDashboard() {
               Nouvelle publication
             </Button>
           </Link>
-        </motion.div>
+        </div>
+      </motion.div>
 
         {/* KPI Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -390,7 +357,6 @@ export default function SocialDashboard() {
             </Card>
           </div>
         </div>
-      </main>
-    </div>
+    </>
   );
 }

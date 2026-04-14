@@ -2,8 +2,6 @@
 
 import { motion } from "framer-motion";
 import {
-  Newspaper,
-  ArrowLeft,
   Users,
   Search,
   Heart,
@@ -17,7 +15,6 @@ import {
   Cake,
   BarChart3,
 } from "lucide-react";
-import Link from "next/link";
 import { useState } from "react";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
@@ -83,24 +80,13 @@ export default function CrmPage() {
   });
 
   return (
-    <div className="min-h-screen gradient-mesh">
-      {/* Nav */}
-      <nav className="glass-nav sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href="/institution/dashboard" className="p-2 hover:bg-navy/5 rounded-xl transition-colors">
-              <ArrowLeft className="w-5 h-5 text-navy" />
-            </Link>
-            <div className="w-8 h-8 rounded-lg gradient-gold flex items-center justify-center">
-              <Newspaper className="w-4 h-4 text-navy-dark" />
-            </div>
-            <span className="text-lg font-bold text-navy">CRM Journalistes</span>
-          </div>
-        </div>
-      </nav>
+    <>
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+        <h1 className="text-2xl font-extrabold text-navy tracking-tight">CRM Journalistes</h1>
+        <p className="text-warm-gray text-sm mt-1">Gerez vos relations avec les journalistes et medias.</p>
+      </motion.div>
 
-      <main className="max-w-7xl mx-auto px-6 py-8">
-        {/* KPIs */}
+      {/* KPIs */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {kpis.map((kpi, i) => (
             <motion.div key={kpi.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}>
@@ -254,7 +240,6 @@ export default function CrmPage() {
             </Card>
           </div>
         </div>
-      </main>
-    </div>
+    </>
   );
 }
