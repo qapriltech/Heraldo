@@ -7,7 +7,6 @@ import {
   Mail,
   Video,
   Wallet,
-  TrendingUp,
   Calendar,
   Clock,
   CheckCircle,
@@ -17,6 +16,9 @@ import {
   Star,
   Bell,
   Loader2,
+  User,
+  Camera,
+  Mic,
 } from "lucide-react";
 import Link from "next/link";
 import Card from "@/components/ui/Card";
@@ -24,111 +26,127 @@ import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import { api } from "@/lib/api";
 
-const fallbackKpis = [
-  { label: "Invitations en attente", value: "5", icon: Mail, color: "text-orange", bg: "bg-orange/10" },
-  { label: "AGORAs a venir", value: "3", icon: Video, color: "text-gold", bg: "bg-gold/10" },
-  { label: "Gains FCM total", value: "875 000 F", icon: Wallet, color: "text-green", bg: "bg-green/10" },
-  { label: "Score credibilite", value: "94/100", icon: Star, color: "text-gold", bg: "bg-gold/10" },
-];
-
-const fallbackInvitations = [
-  { id: 1, institution: "Ministere de l'Economie", type: "Communique", title: "Resultats financiers T1 2026", date: "12 avr. 2026", fcmAmount: "150 000 F" },
-  { id: 2, institution: "Orange Cote d'Ivoire", type: "AGORA", title: "Lancement 5G - Conference de presse", date: "15 avr. 2026", fcmAmount: "200 000 F" },
-  { id: 3, institution: "Banque Mondiale", type: "Communique", title: "Rapport economique Afrique de l'Ouest", date: "14 avr. 2026", fcmAmount: "100 000 F" },
-  { id: 4, institution: "Gouvernement CI", type: "AGORA", title: "Point presse budget 2026", date: "18 avr. 2026", fcmAmount: "250 000 F" },
-  { id: 5, institution: "SODECI", type: "Communique", title: "Programme d'investissement 2026-2030", date: "20 avr. 2026", fcmAmount: "120 000 F" },
-];
-
-const fallbackAgoras = [
-  { title: "Lancement 5G - Orange CI", date: "15 avr. 2026, 10:00", type: "Premium", journalists: 45 },
-  { title: "Point presse budget - Gouvernement", date: "18 avr. 2026, 14:30", type: "Nationale", journalists: 120 },
-  { title: "Bilan annuel CIE", date: "22 avr. 2026, 09:00", type: "Standard", journalists: 28 },
-];
-
-const fallbackFcmHistory = [
-  { description: "Article publie - Ministere Economie", amount: "+150 000 F", date: "11 avr.", status: "completed" },
-  { description: "Reportage video - Orange CI", amount: "+200 000 F", date: "8 avr.", status: "completed" },
-  { description: "Article en cours de validation", amount: "100 000 F", date: "12 avr.", status: "pending" },
-  { description: "Couverture conference SODECI", amount: "+75 000 F", date: "5 avr.", status: "completed" },
-];
+function getUser() {
+  if (typeof window === "undefined") return null;
+  try { return JSON.parse(localStorage.getItem("heraldo_user") || "null"); } catch { return null; }
+}
 
 export default function JournalistDashboard() {
   const [profile, setProfile] = useState<any>(null);
-  const [kpis, setKpis] = useState(fallbackKpis);
-  const [pendingInvitations, setPendingInvitations] = useState<any[]>(fallbackInvitations);
-  const [upcomingAgoras, setUpcomingAgoras] = useState<any[]>(fallbackAgoras);
-  const [fcmHistory, setFcmHistory] = useState<any[]>(fallbackFcmHistory);
+  const [kpis, setKpis] = useState({
+    pendingInvitations: 0,
+    upcomingEvents: 0,
+    fcmThisMonth: "0 F",
+    profileScore: 0,
+  });
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [upcomingAgoras, setUpcomingAgoras] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const user = getUser();
 
   useEffect(() => {
     Promise.all([
       api.get<any>("/journalist-profile/me").then((res) => {
-        setProfile(res.data ?? res);
+        const d = res.data ?? res;
+        setProfile(d);
+        if (d?.profileCompletion) {
+          setKpis(prev => ({ ...prev, profileScore: d.profileCompletion }));
+        }
       }).catch(() => {}),
       api.get<any>("/journalist-agenda/upcoming").then((res) => {
-        const data = res.data ?? [];
-        if (Array.isArray(data) && data.length > 0) {
-          setPendingInvitations(data.filter((i: any) => i.type === "Communique" || i.type === "AGORA") ?? []);
-          setUpcomingAgoras(data.filter((i: any) => i.roomType || i.type === "AGORA") ?? []);
+        const data = res.data ?? res;
+        if (Array.isArray(data)) {
+          setUpcomingAgoras(data.filter((e: any) => e.type === "AGORA").slice(0, 4));
+          setKpis(prev => ({ ...prev, upcomingEvents: data.length }));
         }
       }).catch(() => {}),
       api.get<any>("/journalist/revenues/dashboard").then((res) => {
         const d = res.data ?? res;
-        if (d) {
-          if (d.history && Array.isArray(d.history)) setFcmHistory(d.history);
-          if (d.kpis) {
-            setKpis([
-              { label: "Invitations en attente", value: String(d.kpis.pendingInvitations ?? "0"), icon: Mail, color: "text-orange", bg: "bg-orange/10" },
-              { label: "AGORAs a venir", value: String(d.kpis.upcomingAgoras ?? "0"), icon: Video, color: "text-gold", bg: "bg-gold/10" },
-              { label: "Gains FCM total", value: d.kpis.totalFcm ?? "0 F", icon: Wallet, color: "text-green", bg: "bg-green/10" },
-              { label: "Score credibilite", value: d.kpis.credibilityScore ?? "0/100", icon: Star, color: "text-gold", bg: "bg-gold/10" },
-            ]);
-          }
+        if (d?.kpis) {
+          setKpis(prev => ({
+            ...prev,
+            pendingInvitations: d.kpis.pendingInvitations ?? 0,
+            fcmThisMonth: d.kpis.fcmThisMonth ?? "0 F",
+          }));
         }
+      }).catch(() => {}),
+      api.get<any>("/journalist-notifications/unread-count").then((res) => {
+        const d = res.data ?? res;
+        if (d?.notifications) setNotifications(d.notifications.slice(0, 5));
       }).catch(() => {}),
     ]).finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="flex items-center justify-center min-h-[40vh]"><Loader2 className="w-8 h-8 text-gold animate-spin" /></div>;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen gradient-mesh">
+        <Loader2 className="w-8 h-8 text-orange animate-spin" />
+      </div>
+    );
+  }
 
-  const displayName = profile?.name ?? "Marie Dupont";
-  const displayRole = profile?.role ?? "Journaliste accreditee - RFI | Specialite : Economie";
-  const displayInitials = profile?.initials ?? "MD";
+  const displayName = profile?.name ?? user?.fullName ?? "Journaliste";
+  const displayRole = profile?.media ?? "Journaliste accredite(e)";
+  const displayInitials = (profile?.name ?? user?.fullName ?? "J").charAt(0);
+
+  const kpiCards = [
+    { label: "Invitations en attente", value: String(kpis.pendingInvitations), icon: Mail, color: "text-orange", bg: "bg-orange/10" },
+    { label: "Prochains evenements", value: String(kpis.upcomingEvents), icon: Calendar, color: "text-navy", bg: "bg-navy/10" },
+    { label: "Revenus FCM ce mois", value: kpis.fcmThisMonth, icon: Wallet, color: "text-green", bg: "bg-green/10" },
+    { label: "Score profil", value: `${kpis.profileScore}%`, icon: Star, color: "text-gold", bg: "bg-gold/10" },
+  ];
+
+  const quickActions = [
+    { label: "Voir invitations", href: "/journalist/agenda", icon: Mail, color: "bg-orange/10 text-orange" },
+    { label: "Soumettre preuve FCM", href: "/journalist/revenus", icon: Camera, color: "bg-green/10 text-green" },
+    { label: "Completer profil", href: "/journalist/profil", icon: User, color: "bg-gold/10 text-gold-dark" },
+  ];
 
   return (
-    <div className="min-h-screen bg-ivory">
+    <div className="min-h-screen gradient-mesh">
+      {/* Nav */}
       <nav className="glass-nav sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg gradient-gold flex items-center justify-center">
-              <Newspaper className="w-4 h-4 text-navy-dark" />
-            </div>
+            <Link href="/journalist/dashboard">
+              <div className="w-8 h-8 rounded-lg bg-orange flex items-center justify-center">
+                <Newspaper className="w-4 h-4 text-white" />
+              </div>
+            </Link>
             <span className="text-lg font-bold text-navy">HERALDO</span>
             <span className="text-sm text-warm-gray ml-2 hidden sm:inline">| Espace Journaliste</span>
           </div>
           <div className="flex items-center gap-4">
-            <button className="relative p-2 rounded-lg hover:bg-ivory transition-colors cursor-pointer">
+            <Link href="/journalist/notifications" className="relative p-2 rounded-lg hover:bg-ivory transition-colors">
               <Bell className="w-5 h-5 text-navy" />
-              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-orange rounded-full text-white text-[10px] font-bold flex items-center justify-center">
-                5
-              </span>
-            </button>
-            <div className="w-9 h-9 rounded-full bg-gold text-navy-dark flex items-center justify-center text-sm font-semibold">
-              {displayInitials}
-            </div>
+              {notifications.length > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-orange rounded-full text-white text-[10px] font-bold flex items-center justify-center">
+                  {notifications.length}
+                </span>
+              )}
+            </Link>
+            <Link href="/journalist/profil">
+              <div className="w-9 h-9 rounded-full bg-orange text-white flex items-center justify-center text-sm font-semibold">
+                {displayInitials}
+              </div>
+            </Link>
           </div>
         </div>
       </nav>
 
       <main className="max-w-7xl mx-auto px-6 py-8">
+        {/* Header */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-          <h1 className="text-3xl font-bold text-navy mb-1">Bonjour, {displayName}</h1>
+          <div className="flex items-center gap-3 mb-1">
+            <h1 className="text-3xl font-bold text-navy">Bonjour, {displayName}</h1>
+            <Badge variant="warning" dot>Journaliste</Badge>
+          </div>
           <p className="text-warm-gray">{displayRole}</p>
         </motion.div>
 
         {/* KPIs */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {kpis.map((kpi, i) => (
+          {kpiCards.map((kpi, i) => (
             <motion.div key={kpi.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}>
               <Card hover={false}>
                 <div className="flex items-start justify-between mb-3">
@@ -143,111 +161,94 @@ export default function JournalistDashboard() {
           ))}
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-6">
-          {/* Pending invitations */}
-          <div>
+        {/* Quick Actions */}
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="mb-8">
+          <h2 className="text-lg font-semibold text-navy mb-4">Actions rapides</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {quickActions.map((action, i) => (
+              <Link key={action.label} href={action.href}>
+                <Card padding="sm" className="flex items-center gap-3 cursor-pointer">
+                  <div className={`w-10 h-10 rounded-xl ${action.color} flex items-center justify-center`}>
+                    <action.icon className="w-5 h-5" />
+                  </div>
+                  <span className="text-sm font-semibold text-navy">{action.label}</span>
+                  <ArrowRight className="w-4 h-4 text-warm-gray ml-auto" />
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </motion.div>
+
+        <div className="grid lg:grid-cols-3 gap-6">
+          {/* Notifications feed */}
+          <div className="lg:col-span-2">
             <h2 className="text-lg font-semibold text-navy mb-4 flex items-center gap-2">
-              <Mail className="w-5 h-5 text-orange" />
-              Invitations en attente
+              <Bell className="w-5 h-5 text-orange" />
+              Notifications recentes
             </h2>
             <div className="space-y-3">
-              {pendingInvitations.map((inv, i) => (
-                <motion.div key={inv.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.06 }}>
+              {notifications.length > 0 ? notifications.map((n: any, i: number) => (
+                <motion.div key={n.id ?? i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.06 }}>
+                  <Card padding="sm" className="flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${n.read ? "bg-navy/5" : "bg-orange/10"}`}>
+                      {n.type === "invitation" ? <Mail className="w-4 h-4 text-orange" /> :
+                       n.type === "fcm" ? <Wallet className="w-4 h-4 text-green" /> :
+                       <Bell className="w-4 h-4 text-navy" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm truncate ${n.read ? "text-warm-gray" : "font-semibold text-navy"}`}>{n.title ?? n.message}</p>
+                      <p className="text-xs text-warm-gray">{n.body ?? ""}</p>
+                    </div>
+                    <span className="text-[10px] text-warm-gray shrink-0">{n.time ?? ""}</span>
+                  </Card>
+                </motion.div>
+              )) : (
+                <Card hover={false}>
+                  <p className="text-sm text-warm-gray text-center py-4">Aucune notification recente</p>
+                </Card>
+              )}
+              <Link href="/journalist/notifications">
+                <Button variant="ghost" size="sm" className="w-full mt-2">
+                  Voir toutes les notifications <ArrowRight className="w-4 h-4" />
+                </Button>
+              </Link>
+            </div>
+          </div>
+
+          {/* Upcoming AGORA rooms */}
+          <div>
+            <h2 className="text-lg font-semibold text-navy mb-4 flex items-center gap-2">
+              <Mic className="w-5 h-5 text-orange" />
+              AGORAs a venir
+            </h2>
+            <div className="space-y-3">
+              {upcomingAgoras.length > 0 ? upcomingAgoras.map((agora: any, i: number) => (
+                <motion.div key={agora.id ?? i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 + i * 0.06 }}>
                   <Card padding="sm">
-                    <div className="flex items-start gap-3">
-                      <div className={`w-10 h-10 rounded-xl shrink-0 flex items-center justify-center
-                        ${inv.type === "AGORA" ? "bg-gold/10" : "bg-navy/10"}`}>
-                        {inv.type === "AGORA" ? <Video className="w-5 h-5 text-gold" /> : <FileText className="w-5 h-5 text-navy" />}
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-orange/10 flex items-center justify-center shrink-0">
+                        <Video className="w-5 h-5 text-orange" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <Badge variant={inv.type === "AGORA" ? "gold" : "info"}>
-                            {inv.type}
-                          </Badge>
-                          <span className="text-xs text-warm-gray">{inv.date}</span>
+                        <h3 className="text-sm font-semibold text-navy truncate">{agora.title}</h3>
+                        <div className="flex items-center gap-2 mt-1 text-xs text-warm-gray">
+                          <Calendar className="w-3 h-3" />
+                          <span>{agora.date}</span>
                         </div>
-                        <h3 className="text-sm font-semibold text-navy truncate">{inv.title}</h3>
-                        <p className="text-xs text-warm-gray">{inv.institution}</p>
-                        <div className="flex items-center gap-2 mt-2">
-                          <span className="text-xs font-medium text-green flex items-center gap-1">
-                            <DollarSign className="w-3 h-3" /> FCM: {inv.fcmAmount}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex flex-col gap-1.5 shrink-0">
-                        <Button size="sm" variant="primary">Accepter</Button>
-                        <Button size="sm" variant="ghost">Decliner</Button>
                       </div>
                     </div>
                   </Card>
                 </motion.div>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-6">
-            {/* Upcoming AGORAs */}
-            <div>
-              <h2 className="text-lg font-semibold text-navy mb-4 flex items-center gap-2">
-                <Video className="w-5 h-5 text-gold" />
-                AGORAs a venir
-              </h2>
-              <div className="space-y-3">
-                {upcomingAgoras.map((agora, i) => (
-                  <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 + i * 0.06 }}>
-                    <Card padding="sm" className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-xl bg-gold/10 flex items-center justify-center shrink-0">
-                        <Video className="w-5 h-5 text-gold" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-sm font-semibold text-navy truncate">{agora.title}</h3>
-                        <div className="flex items-center gap-3 mt-1 text-xs text-warm-gray">
-                          <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {agora.date}</span>
-                          <Badge variant="gold">{agora.type}</Badge>
-                        </div>
-                      </div>
-                      <Button variant="outline" size="sm">Rejoindre</Button>
-                    </Card>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-
-            {/* FCM History */}
-            <div>
-              <h2 className="text-lg font-semibold text-navy mb-4 flex items-center gap-2">
-                <Wallet className="w-5 h-5 text-green" />
-                Historique FCM
-              </h2>
-              <Card hover={false}>
-                <div className="divide-y divide-gray-100">
-                  {fcmHistory.map((item, i) => (
-                    <motion.div
-                      key={i}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.4 + i * 0.06 }}
-                      className="flex items-center gap-3 py-3 first:pt-0 last:pb-0"
-                    >
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0
-                        ${item.status === "completed" ? "bg-green/10" : "bg-orange/10"}`}>
-                        {item.status === "completed" ? (
-                          <CheckCircle className="w-4 h-4 text-green" />
-                        ) : (
-                          <Clock className="w-4 h-4 text-orange" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-navy truncate">{item.description}</p>
-                        <p className="text-xs text-warm-gray">{item.date}</p>
-                      </div>
-                      <span className={`text-sm font-bold ${item.status === "completed" ? "text-green" : "text-orange"}`}>
-                        {item.amount}
-                      </span>
-                    </motion.div>
-                  ))}
-                </div>
-              </Card>
+              )) : (
+                <Card hover={false}>
+                  <p className="text-sm text-warm-gray text-center py-4">Aucune AGORA prevue</p>
+                </Card>
+              )}
+              <Link href="/journalist/agenda">
+                <Button variant="ghost" size="sm" className="w-full mt-2">
+                  Voir l&apos;agenda complet <ArrowRight className="w-4 h-4" />
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
