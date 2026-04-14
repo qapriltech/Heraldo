@@ -26,8 +26,8 @@ export class AgoraController {
   }
 
   @Get('rooms')
-  findAllRooms(@Query() query: any) {
-    return this.service.findAllRooms(query);
+  findAllRooms(@Req() req: any, @Query() query: any) {
+    return this.service.findAllRooms(req.user.id, query);
   }
 
   @Get('rooms/:id')
