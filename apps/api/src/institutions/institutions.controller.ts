@@ -7,6 +7,7 @@ import {
   Body,
   Param,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { InstitutionsService } from './institutions.service';
@@ -17,6 +18,11 @@ import { RolesGuard, Roles } from '../auth/roles.guard';
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class InstitutionsController {
   constructor(private readonly service: InstitutionsService) {}
+
+  @Get('dashboard')
+  getDashboard(@Req() req: any) {
+    return this.service.getDashboard(req.user.id);
+  }
 
   @Post()
   @Roles('ADMIN')
