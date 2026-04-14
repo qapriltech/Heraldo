@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Newspaper,
@@ -15,84 +16,36 @@ import {
   DollarSign,
   Star,
   Bell,
+  Loader2,
 } from "lucide-react";
 import Link from "next/link";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
+import { api } from "@/lib/api";
 
-const kpis = [
+const fallbackKpis = [
   { label: "Invitations en attente", value: "5", icon: Mail, color: "text-orange", bg: "bg-orange/10" },
   { label: "AGORAs a venir", value: "3", icon: Video, color: "text-gold", bg: "bg-gold/10" },
   { label: "Gains FCM total", value: "875 000 F", icon: Wallet, color: "text-green", bg: "bg-green/10" },
   { label: "Score credibilite", value: "94/100", icon: Star, color: "text-gold", bg: "bg-gold/10" },
 ];
 
-const pendingInvitations = [
-  {
-    id: 1,
-    institution: "Ministere de l'Economie",
-    type: "Communique",
-    title: "Resultats financiers T1 2026",
-    date: "12 avr. 2026",
-    fcmAmount: "150 000 F",
-  },
-  {
-    id: 2,
-    institution: "Orange Cote d'Ivoire",
-    type: "AGORA",
-    title: "Lancement 5G - Conference de presse",
-    date: "15 avr. 2026",
-    fcmAmount: "200 000 F",
-  },
-  {
-    id: 3,
-    institution: "Banque Mondiale",
-    type: "Communique",
-    title: "Rapport economique Afrique de l'Ouest",
-    date: "14 avr. 2026",
-    fcmAmount: "100 000 F",
-  },
-  {
-    id: 4,
-    institution: "Gouvernement CI",
-    type: "AGORA",
-    title: "Point presse budget 2026",
-    date: "18 avr. 2026",
-    fcmAmount: "250 000 F",
-  },
-  {
-    id: 5,
-    institution: "SODECI",
-    type: "Communique",
-    title: "Programme d'investissement 2026-2030",
-    date: "20 avr. 2026",
-    fcmAmount: "120 000 F",
-  },
+const fallbackInvitations = [
+  { id: 1, institution: "Ministere de l'Economie", type: "Communique", title: "Resultats financiers T1 2026", date: "12 avr. 2026", fcmAmount: "150 000 F" },
+  { id: 2, institution: "Orange Cote d'Ivoire", type: "AGORA", title: "Lancement 5G - Conference de presse", date: "15 avr. 2026", fcmAmount: "200 000 F" },
+  { id: 3, institution: "Banque Mondiale", type: "Communique", title: "Rapport economique Afrique de l'Ouest", date: "14 avr. 2026", fcmAmount: "100 000 F" },
+  { id: 4, institution: "Gouvernement CI", type: "AGORA", title: "Point presse budget 2026", date: "18 avr. 2026", fcmAmount: "250 000 F" },
+  { id: 5, institution: "SODECI", type: "Communique", title: "Programme d'investissement 2026-2030", date: "20 avr. 2026", fcmAmount: "120 000 F" },
 ];
 
-const upcomingAgoras = [
-  {
-    title: "Lancement 5G - Orange CI",
-    date: "15 avr. 2026, 10:00",
-    type: "Premium",
-    journalists: 45,
-  },
-  {
-    title: "Point presse budget - Gouvernement",
-    date: "18 avr. 2026, 14:30",
-    type: "Nationale",
-    journalists: 120,
-  },
-  {
-    title: "Bilan annuel CIE",
-    date: "22 avr. 2026, 09:00",
-    type: "Standard",
-    journalists: 28,
-  },
+const fallbackAgoras = [
+  { title: "Lancement 5G - Orange CI", date: "15 avr. 2026, 10:00", type: "Premium", journalists: 45 },
+  { title: "Point presse budget - Gouvernement", date: "18 avr. 2026, 14:30", type: "Nationale", journalists: 120 },
+  { title: "Bilan annuel CIE", date: "22 avr. 2026, 09:00", type: "Standard", journalists: 28 },
 ];
 
-const fcmHistory = [
+const fallbackFcmHistory = [
   { description: "Article publie - Ministere Economie", amount: "+150 000 F", date: "11 avr.", status: "completed" },
   { description: "Reportage video - Orange CI", amount: "+200 000 F", date: "8 avr.", status: "completed" },
   { description: "Article en cours de validation", amount: "100 000 F", date: "12 avr.", status: "pending" },
@@ -100,6 +53,48 @@ const fcmHistory = [
 ];
 
 export default function JournalistDashboard() {
+  const [profile, setProfile] = useState<any>(null);
+  const [kpis, setKpis] = useState(fallbackKpis);
+  const [pendingInvitations, setPendingInvitations] = useState<any[]>(fallbackInvitations);
+  const [upcomingAgoras, setUpcomingAgoras] = useState<any[]>(fallbackAgoras);
+  const [fcmHistory, setFcmHistory] = useState<any[]>(fallbackFcmHistory);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      api.get<any>("/journalist-profile/me").then((res) => {
+        setProfile(res.data ?? res);
+      }).catch(() => {}),
+      api.get<any>("/journalist-agenda/upcoming").then((res) => {
+        const data = res.data ?? [];
+        if (Array.isArray(data) && data.length > 0) {
+          setPendingInvitations(data.filter((i: any) => i.type === "Communique" || i.type === "AGORA") ?? []);
+          setUpcomingAgoras(data.filter((i: any) => i.roomType || i.type === "AGORA") ?? []);
+        }
+      }).catch(() => {}),
+      api.get<any>("/journalist/revenues/dashboard").then((res) => {
+        const d = res.data ?? res;
+        if (d) {
+          if (d.history && Array.isArray(d.history)) setFcmHistory(d.history);
+          if (d.kpis) {
+            setKpis([
+              { label: "Invitations en attente", value: String(d.kpis.pendingInvitations ?? "0"), icon: Mail, color: "text-orange", bg: "bg-orange/10" },
+              { label: "AGORAs a venir", value: String(d.kpis.upcomingAgoras ?? "0"), icon: Video, color: "text-gold", bg: "bg-gold/10" },
+              { label: "Gains FCM total", value: d.kpis.totalFcm ?? "0 F", icon: Wallet, color: "text-green", bg: "bg-green/10" },
+              { label: "Score credibilite", value: d.kpis.credibilityScore ?? "0/100", icon: Star, color: "text-gold", bg: "bg-gold/10" },
+            ]);
+          }
+        }
+      }).catch(() => {}),
+    ]).finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div className="flex items-center justify-center min-h-[40vh]"><Loader2 className="w-8 h-8 text-gold animate-spin" /></div>;
+
+  const displayName = profile?.name ?? "Marie Dupont";
+  const displayRole = profile?.role ?? "Journaliste accreditee - RFI | Specialite : Economie";
+  const displayInitials = profile?.initials ?? "MD";
+
   return (
     <div className="min-h-screen bg-ivory">
       <nav className="glass-nav sticky top-0 z-40">
@@ -119,7 +114,7 @@ export default function JournalistDashboard() {
               </span>
             </button>
             <div className="w-9 h-9 rounded-full bg-gold text-navy-dark flex items-center justify-center text-sm font-semibold">
-              MD
+              {displayInitials}
             </div>
           </div>
         </div>
@@ -127,8 +122,8 @@ export default function JournalistDashboard() {
 
       <main className="max-w-7xl mx-auto px-6 py-8">
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-          <h1 className="text-3xl font-bold text-navy mb-1">Bonjour, Marie Dupont</h1>
-          <p className="text-warm-gray">Journaliste accreditee - RFI | Specialite : Economie</p>
+          <h1 className="text-3xl font-bold text-navy mb-1">Bonjour, {displayName}</h1>
+          <p className="text-warm-gray">{displayRole}</p>
         </motion.div>
 
         {/* KPIs */}

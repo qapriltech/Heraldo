@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Plus,
@@ -13,77 +13,13 @@ import {
   XCircle,
   Eye,
   MoreHorizontal,
+  Loader2,
 } from "lucide-react";
 import Link from "next/link";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
-
-const communiques = [
-  {
-    id: "CP-2026-047",
-    title: "Resultats financiers T1 2026 - Croissance de 12%",
-    format: "Long",
-    date: "12 avr. 2026",
-    recipients: 156,
-    openRate: "89%",
-    status: "diffuse",
-  },
-  {
-    id: "CP-2026-046",
-    title: "Nomination du nouveau Directeur General",
-    format: "Court",
-    date: "10 avr. 2026",
-    recipients: 0,
-    openRate: "-",
-    status: "en_attente",
-  },
-  {
-    id: "CP-2026-045",
-    title: "Partenariat strategique avec la Banque Mondiale",
-    format: "Long",
-    date: "8 avr. 2026",
-    recipients: 203,
-    openRate: "92%",
-    status: "diffuse",
-  },
-  {
-    id: "CP-2026-044",
-    title: "FLASH - Mise au point sur les rumeurs de privatisation",
-    format: "Flash",
-    date: "5 avr. 2026",
-    recipients: 312,
-    openRate: "95%",
-    status: "diffuse",
-  },
-  {
-    id: "CP-2026-043",
-    title: "Lancement du programme de formation professionnelle",
-    format: "Long",
-    date: "2 avr. 2026",
-    recipients: 145,
-    openRate: "78%",
-    status: "diffuse",
-  },
-  {
-    id: "CP-2026-042",
-    title: "Rapport annuel 2025 disponible",
-    format: "Court",
-    date: "28 mars 2026",
-    recipients: 0,
-    openRate: "-",
-    status: "brouillon",
-  },
-  {
-    id: "CP-2026-041",
-    title: "Inauguration du nouveau siege regional",
-    format: "Long",
-    date: "25 mars 2026",
-    recipients: 89,
-    openRate: "85%",
-    status: "expire",
-  },
-];
+import { api } from "@/lib/api";
 
 const statusConfig: Record<
   string,
@@ -104,6 +40,17 @@ const formatColors: Record<string, string> = {
 export default function CommuniquesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [communiques, setCommuniques] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get<any>("/communiques")
+      .then((res) => setCommuniques(res.data ?? []))
+      .catch(() => setCommuniques([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div className="flex items-center justify-center min-h-[40vh]"><Loader2 className="w-8 h-8 text-gold animate-spin" /></div>;
 
   const filtered = communiques.filter((c) => {
     const matchesSearch = c.title

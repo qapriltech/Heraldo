@@ -15,11 +15,13 @@ import {
   Zap,
   MessageSquare,
   Sparkles,
+  Loader2,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
+import { api } from "@/lib/api";
 
 type EventType =
   | "inauguration"
@@ -92,95 +94,24 @@ const priorityConfig: Record<
   critical: { label: "Critique", variant: "error" },
 };
 
-const events: AgendaEvent[] = [
-  {
-    id: "1",
-    title: "Inauguration Pont Henri Konan Bedie",
-    date: 14,
-    time: "09:00",
-    type: "inauguration",
-    priority: "high",
-    description: "Ceremonie officielle avec le PM. Couverture media complete.",
-  },
-  {
-    id: "2",
-    title: "Conference presse Q1 2026",
-    date: 14,
-    time: "14:00",
-    type: "conference",
-    priority: "high",
-    description: "Presentation des resultats economiques du premier trimestre.",
-  },
-  {
-    id: "3",
-    title: "Interview RFI - Reforme fiscale",
-    date: 16,
-    time: "10:30",
-    type: "interview",
-    priority: "medium",
-    description:
-      "Interview en direct avec Marie Dupont sur la nouvelle reforme.",
-  },
-  {
-    id: "4",
-    title: "Reaction - Rapport FMI",
-    date: 18,
-    time: "08:00",
-    type: "reaction",
-    priority: "critical",
-    description:
-      "Communique de reaction suite a la publication du rapport FMI.",
-  },
-  {
-    id: "5",
-    title: "Communique budget 2027",
-    date: 20,
-    time: "11:00",
-    type: "communique",
-    priority: "medium",
-    description: "Envoi du communique sur les orientations budgetaires 2027.",
-  },
-  {
-    id: "6",
-    title: "Gestion crise - Greve portuaire",
-    date: 22,
-    time: "07:00",
-    type: "crise",
-    priority: "critical",
-    description: "Plan de communication de crise activable.",
-  },
-  {
-    id: "7",
-    title: "Inauguration usine textile Bouake",
-    date: 25,
-    time: "10:00",
-    type: "inauguration",
-    priority: "medium",
-    description: "Visite officielle et discours du Ministre.",
-  },
-  {
-    id: "8",
-    title: "Conference investisseurs UEMOA",
-    date: 28,
-    time: "09:00",
-    type: "conference",
-    priority: "high",
-    description: "Forum annuel des investisseurs de la zone UEMOA.",
-  },
-];
-
-const suggestions = [
-  { date: "17 avr", title: "Journee mondiale de la lutte contre le paludisme" },
-  { date: "25 avr", title: "Fete du travail - preparation" },
-  { date: "1 mai", title: "Fete du travail" },
-  { date: "7 mai", title: "Anniversaire independance (preparation)" },
-];
+const defaultEvents: AgendaEvent[] = [];
+const defaultSuggestions: { date: string; title: string }[] = [];
 
 const daysOfWeek = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
 export default function AgendaPage() {
   const [selectedDay, setSelectedDay] = useState(14);
   const currentMonth = "Avril 2026";
+  const [events, setEvents] = useState<AgendaEvent[]>(defaultEvents);
+  const [suggestions, setSuggestions] = useState<{ date: string; title: string }[]>(defaultSuggestions);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      api.get<any>("/agenda/items").then((res) => setEvents(res.data ?? [])).catch(() => {}),
+      api.get<any>("/agenda/recurring-suggestions").then((res) => setSuggestions(res.data ?? [])).catch(() => {}),
+    ]).finally(() => setLoading(false));
+  }, []);
 
   // Build calendar grid for April 2026 (starts on Wednesday)
   const daysInMonth = 30;
@@ -192,6 +123,8 @@ export default function AgendaPage() {
 
   const eventsForDay = events.filter((e) => e.date === selectedDay);
   const eventDays = new Set(events.map((e) => e.date));
+
+  if (loading) return <div className="flex items-center justify-center min-h-[40vh]"><Loader2 className="w-8 h-8 text-gold animate-spin" /></div>;
 
   return (
     <>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Wallet,
@@ -16,100 +16,28 @@ import {
   AlertTriangle,
   CreditCard,
   Eye,
+  Loader2,
 } from "lucide-react";
 
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
-
-const pools = [
-  {
-    id: "FCM-001",
-    title: "Couverture lancement produit Alpha",
-    totalFunded: "500 000 F",
-    released: "320 000 F",
-    remaining: "180 000 F",
-    proofs: 4,
-    proofsValidated: 3,
-    status: "active",
-  },
-  {
-    id: "FCM-002",
-    title: "Campagne institutionnelle Q1",
-    totalFunded: "1 200 000 F",
-    released: "750 000 F",
-    remaining: "450 000 F",
-    proofs: 8,
-    proofsValidated: 5,
-    status: "active",
-  },
-  {
-    id: "FCM-003",
-    title: "Conference resultats T4 2025",
-    totalFunded: "300 000 F",
-    released: "300 000 F",
-    remaining: "0 F",
-    proofs: 3,
-    proofsValidated: 3,
-    status: "completed",
-  },
-  {
-    id: "FCM-004",
-    title: "Crise communication - Mise au point",
-    totalFunded: "750 000 F",
-    released: "200 000 F",
-    remaining: "550 000 F",
-    proofs: 6,
-    proofsValidated: 2,
-    status: "active",
-  },
-];
-
-const transactions = [
-  {
-    id: "TX-001",
-    description: "Depot FCM - Campagne Q1",
-    amount: "+1 200 000 F",
-    type: "deposit",
-    date: "12 avr. 2026",
-    status: "completed",
-  },
-  {
-    id: "TX-002",
-    description: "Liberation - Article Le Monde Afrique",
-    amount: "-150 000 F",
-    type: "release",
-    date: "11 avr. 2026",
-    status: "completed",
-  },
-  {
-    id: "TX-003",
-    description: "Liberation - Reportage RTI",
-    amount: "-200 000 F",
-    type: "release",
-    date: "10 avr. 2026",
-    status: "completed",
-  },
-  {
-    id: "TX-004",
-    description: "Depot FCM - Lancement Alpha",
-    amount: "+500 000 F",
-    type: "deposit",
-    date: "8 avr. 2026",
-    status: "completed",
-  },
-  {
-    id: "TX-005",
-    description: "Liberation - Article Jeune Afrique",
-    amount: "-100 000 F",
-    type: "release",
-    date: "7 avr. 2026",
-    status: "pending",
-  },
-];
+import { api } from "@/lib/api";
 
 export default function FCMPage() {
   const [activeTab, setActiveTab] = useState<"pools" | "transactions">("pools");
+  const [pools, setPools] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      api.get<any>("/fcm/pools").then((res) => setPools(res.data ?? [])).catch(() => setPools([])),
+      api.get<any>("/fcm/transactions").then((res) => setTransactions(res.data ?? [])).catch(() => setTransactions([])),
+    ]).finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div className="flex items-center justify-center min-h-[40vh]"><Loader2 className="w-8 h-8 text-gold animate-spin" /></div>;
 
   return (
     <>

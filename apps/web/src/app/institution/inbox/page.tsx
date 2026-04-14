@@ -12,11 +12,13 @@ import {
   AlertCircle,
   Inbox,
   Filter,
+  Loader2,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
+import { api } from "@/lib/api";
 
 type Channel = "gmail" | "whatsapp" | "outlook" | "web";
 type MsgCategory = "interview" | "info" | "invitation" | "reclamation";
@@ -57,116 +59,40 @@ const priorityColors: Record<Priority, string> = {
   low: "bg-warm-gray-light",
 };
 
-const messages: Message[] = [
-  {
-    id: "1",
-    sender: "Marie Dupont - RFI",
-    subject: "Demande d'interview - Reforme fiscale",
-    preview: "Bonjour, nous souhaiterions organiser une interview avec le Ministre concernant la nouvelle reforme fiscale...",
-    channel: "gmail",
-    category: "interview",
-    priority: "urgent",
-    time: "Il y a 15 min",
-    read: false,
-    archived: false,
-  },
-  {
-    id: "2",
-    sender: "Jean Kouassi - Fraternite Matin",
-    subject: "Invitation - Gala des medias 2026",
-    preview: "Nous avons le plaisir de vous inviter au Gala annuel des medias de Cote d'Ivoire qui se tiendra le...",
-    channel: "outlook",
-    category: "invitation",
-    priority: "medium",
-    time: "Il y a 1h",
-    read: false,
-    archived: false,
-  },
-  {
-    id: "3",
-    sender: "Aminata Diallo - AFP",
-    subject: "Demande de donnees - PIB Q1 2026",
-    preview: "Dans le cadre de notre reportage sur la croissance economique en Afrique de l'Ouest, nous souhaiterions obtenir...",
-    channel: "gmail",
-    category: "info",
-    priority: "high",
-    time: "Il y a 2h",
-    read: false,
-    archived: false,
-  },
-  {
-    id: "4",
-    sender: "Ibrahim Toure - RTI",
-    subject: "Reclamation - Accreditation refusee",
-    preview: "Nous n'avons toujours pas recu notre accreditation pour la conference presse du 14 avril. Pouvez-vous...",
-    channel: "whatsapp",
-    category: "reclamation",
-    priority: "high",
-    time: "Il y a 3h",
-    read: true,
-    archived: false,
-  },
-  {
-    id: "5",
-    sender: "Sophie Martin - Le Monde Afrique",
-    subject: "Demande interview - Investissements chinois",
-    preview: "Suite a l'annonce des nouveaux accords bilateraux, nous aimerions realiser un entretien approfondi...",
-    channel: "gmail",
-    category: "interview",
-    priority: "medium",
-    time: "Il y a 5h",
-    read: true,
-    archived: false,
-  },
-  {
-    id: "6",
-    sender: "Portail citoyen",
-    subject: "Question - Budget education 2026",
-    preview: "Un citoyen demande des precisions sur l'allocation budgetaire pour l'education dans le nouveau plan...",
-    channel: "web",
-    category: "info",
-    priority: "low",
-    time: "Hier",
-    read: true,
-    archived: false,
-  },
-  {
-    id: "7",
-    sender: "Paul N'Guessan - Abidjan.net",
-    subject: "Invitation - Table ronde numerique",
-    preview: "Nous organisons une table ronde sur la transformation numerique des administrations publiques...",
-    channel: "whatsapp",
-    category: "invitation",
-    priority: "low",
-    time: "Hier",
-    read: true,
-    archived: false,
-  },
-  {
-    id: "8",
-    sender: "Kofi Asante - BBC Afrique",
-    subject: "Demande d'interview urgente",
-    preview: "Suite aux declarations du FMI, BBC Afrique souhaite obtenir une reaction officielle dans les plus brefs...",
-    channel: "gmail",
-    category: "interview",
-    priority: "urgent",
-    time: "Il y a 30 min",
-    read: false,
-    archived: false,
-  },
-];
-
-const statusFilters: { id: StatusFilter; label: string; count?: number }[] = [
-  { id: "all", label: "Tous", count: 8 },
-  { id: "unread", label: "Non lus", count: 4 },
-  { id: "urgent", label: "Urgent", count: 2 },
+const defaultStatusFilters: { id: StatusFilter; label: string; count?: number }[] = [
+  { id: "all", label: "Tous" },
+  { id: "unread", label: "Non lus" },
+  { id: "urgent", label: "Urgent" },
   { id: "archived", label: "Archives" },
 ];
 
 export default function InboxPage() {
   const [activeFilter, setActiveFilter] = useState<StatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedMessage, setSelectedMessage] = useState<string | null>("1");
+  const [selectedMessage, setSelectedMessage] = useState<string | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      api.get<any>("/inbox/messages").then((res) => {
+        const data = res.data ?? [];
+        setMessages(data);
+        if (data.length > 0) setSelectedMessage(data[0].id);
+      }).catch(() => {}),
+      api.get<any>("/inbox/stats").then((res) => setStats(res.data ?? res)).catch(() => {}),
+    ]).finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div className="flex items-center justify-center min-h-[40vh]"><Loader2 className="w-8 h-8 text-gold animate-spin" /></div>;
+
+  const statusFilters: { id: StatusFilter; label: string; count?: number }[] = [
+    { id: "all", label: "Tous", count: messages.length },
+    { id: "unread", label: "Non lus", count: messages.filter(m => !m.read).length },
+    { id: "urgent", label: "Urgent", count: messages.filter(m => m.priority === "urgent").length },
+    { id: "archived", label: "Archives" },
+  ];
 
   const filteredMessages = messages.filter((m) => {
     if (activeFilter === "unread") return !m.read;

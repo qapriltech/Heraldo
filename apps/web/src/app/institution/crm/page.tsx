@@ -14,10 +14,12 @@ import {
   Filter,
   Cake,
   BarChart3,
+  Loader2,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
+import { api } from "@/lib/api";
 
 type Tier = "cold" | "warm" | "hot" | "engaged";
 
@@ -45,22 +47,11 @@ const tierConfig: Record<Tier, { label: string; color: string; bg: string; ring:
   engaged: { label: "Fidele", color: "text-green", bg: "bg-green/10", ring: "ring-green/30" },
 };
 
-const mockJournalists: JournalistCRM[] = [
-  { id: "1", name: "Aminata Coulibaly", media: "Fraternite Matin", mediaType: "Presse ecrite", photo: "AC", tier: "engaged", score: 88, specialties: ["Politique", "Economie"], lastInteraction: "Il y a 2j", interactions90d: 14, publications: 6, fcmTotal: "127 500 F", preferredContact: "whatsapp", birthday: "18 avril" },
-  { id: "2", name: "Sekou Diallo", media: "RTI", mediaType: "Television", photo: "SD", tier: "hot", score: 72, specialties: ["Societe", "Culture"], lastInteraction: "Il y a 5j", interactions90d: 8, publications: 3, fcmTotal: "85 000 F", preferredContact: "email" },
-  { id: "3", name: "Marie Konan", media: "RFI Abidjan", mediaType: "Radio", photo: "MK", tier: "warm", score: 38, specialties: ["International", "Politique"], lastInteraction: "Il y a 3 sem.", interactions90d: 3, publications: 1, fcmTotal: "10 000 F", preferredContact: "phone" },
-  { id: "4", name: "Ibrahim Traore", media: "Abidjan.net", mediaType: "Web", photo: "IT", tier: "hot", score: 65, specialties: ["Economie", "Tech"], lastInteraction: "Il y a 1 sem.", interactions90d: 6, publications: 4, fcmTotal: "68 000 F", preferredContact: "whatsapp" },
-  { id: "5", name: "Fatou Bamba", media: "L'Intelligent d'Abidjan", mediaType: "Presse ecrite", photo: "FB", tier: "cold", score: 12, specialties: ["Societe"], lastInteraction: "Il y a 4 mois", interactions90d: 0, publications: 0, fcmTotal: "0 F", preferredContact: "email" },
-  { id: "6", name: "Kouadio Yao", media: "NCI", mediaType: "Television", photo: "KY", tier: "engaged", score: 91, specialties: ["Politique", "Economie", "Sport"], lastInteraction: "Aujourd'hui", interactions90d: 18, publications: 9, fcmTotal: "195 000 F", preferredContact: "whatsapp", birthday: "22 avril" },
-];
-
-const upcomingBirthdays = mockJournalists.filter(j => j.birthday);
-
-const kpis = [
-  { label: "Journalistes suivis", value: "156", icon: Users, color: "text-navy" },
-  { label: "Relations actives", value: "42", icon: TrendingUp, color: "text-green" },
-  { label: "Interactions ce mois", value: "89", icon: BarChart3, color: "text-gold" },
-  { label: "Publications generees", value: "23", icon: Star, color: "text-orange" },
+const defaultKpis = [
+  { label: "Journalistes suivis", value: "0", icon: Users, color: "text-navy" },
+  { label: "Relations actives", value: "0", icon: TrendingUp, color: "text-green" },
+  { label: "Interactions ce mois", value: "0", icon: BarChart3, color: "text-gold" },
+  { label: "Publications generees", value: "0", icon: Star, color: "text-orange" },
 ];
 
 const contactIcon: Record<string, typeof Phone> = {
@@ -72,6 +63,30 @@ const contactIcon: Record<string, typeof Phone> = {
 export default function CrmPage() {
   const [tierFilter, setTierFilter] = useState<Tier | "all">("all");
   const [search, setSearch] = useState("");
+  const [mockJournalists, setMockJournalists] = useState<JournalistCRM[]>([]);
+  const [kpis, setKpis] = useState(defaultKpis);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      api.get<any>("/crm/journalists").then((res) => setMockJournalists(res.data ?? [])).catch(() => {}),
+      api.get<any>("/crm/dashboard").then((res) => {
+        const d = res.data ?? res;
+        if (d && typeof d === "object" && !Array.isArray(d)) {
+          setKpis([
+            { label: "Journalistes suivis", value: String(d.totalJournalists ?? "0"), icon: Users, color: "text-navy" },
+            { label: "Relations actives", value: String(d.activeRelations ?? "0"), icon: TrendingUp, color: "text-green" },
+            { label: "Interactions ce mois", value: String(d.interactionsThisMonth ?? "0"), icon: BarChart3, color: "text-gold" },
+            { label: "Publications generees", value: String(d.publicationsGenerated ?? "0"), icon: Star, color: "text-orange" },
+          ]);
+        }
+      }).catch(() => {}),
+    ]).finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div className="flex items-center justify-center min-h-[40vh]"><Loader2 className="w-8 h-8 text-gold animate-spin" /></div>;
+
+  const upcomingBirthdays = mockJournalists.filter(j => j.birthday);
 
   const filtered = mockJournalists.filter(j => {
     if (tierFilter !== "all" && j.tier !== tierFilter) return false;

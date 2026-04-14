@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Plus,
@@ -10,59 +11,13 @@ import {
   Play,
   CheckCircle,
   MoreHorizontal,
+  Loader2,
 } from "lucide-react";
 import Link from "next/link";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
-
-const rooms = [
-  {
-    id: "AGR-001",
-    title: "Conference de presse - Resultats T1 2026",
-    type: "Premium",
-    date: "14 avr. 2026, 10:00",
-    journalists: 24,
-    duration: "60 min",
-    status: "upcoming",
-  },
-  {
-    id: "AGR-002",
-    title: "Point presse - Nouveau partenariat strategique",
-    type: "Standard",
-    date: "18 avr. 2026, 14:30",
-    journalists: 12,
-    duration: "30 min",
-    status: "upcoming",
-  },
-  {
-    id: "AGR-003",
-    title: "Salle nationale - Discours du President",
-    type: "Nationale",
-    date: "10 avr. 2026, 09:00",
-    journalists: 156,
-    duration: "90 min",
-    status: "completed",
-  },
-  {
-    id: "AGR-004",
-    title: "Briefing presse - Situation economique",
-    type: "Standard",
-    date: "5 avr. 2026, 11:00",
-    journalists: 34,
-    duration: "45 min",
-    status: "completed",
-  },
-  {
-    id: "AGR-005",
-    title: "Lancement produit - Innovation technologique",
-    type: "Premium",
-    date: "1 avr. 2026, 15:00",
-    journalists: 67,
-    duration: "60 min",
-    status: "completed",
-  },
-];
+import { api } from "@/lib/api";
 
 const typeColors: Record<string, string> = {
   Standard: "bg-navy/10 text-navy",
@@ -77,6 +32,18 @@ const statusConfig: Record<string, { label: string; variant: "info" | "success" 
 };
 
 export default function AgoraPage() {
+  const [rooms, setRooms] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get<any>("/agora/rooms")
+      .then((res) => setRooms(res.data ?? []))
+      .catch(() => setRooms([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div className="flex items-center justify-center min-h-[40vh]"><Loader2 className="w-8 h-8 text-gold animate-spin" /></div>;
+
   return (
     <>
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">

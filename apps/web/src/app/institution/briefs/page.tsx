@@ -18,10 +18,11 @@ import {
   Sparkles,
   Calendar,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
+import { api } from "@/lib/api";
 
 type BriefStatus = "draft" | "generating" | "ready" | "used" | "archived";
 type MediaType = "press" | "radio" | "tv" | "web" | "podcast";
@@ -65,67 +66,20 @@ const mediaLabel: Record<MediaType, string> = {
   podcast: "Podcast",
 };
 
-const mockBriefs: Brief[] = [
-  {
-    id: "1",
-    mediaName: "Fraternite Matin",
-    journalistName: "Aminata Coulibaly",
-    mediaType: "press",
-    intervieweeName: "M. le Maire",
-    intervieweeRole: "Maire de Cocody",
-    topic: "Bilan des investissements routiers Q1 2026",
-    scheduledAt: "15 avril 2026, 10h00",
-    status: "ready",
-    questionsCount: 10,
-    keyMessages: ["1,2 milliard FCFA investis", "12 km de voirie rehabilitee", "Objectif 30 km fin 2026"],
-    createdAt: "Il y a 2h",
-  },
-  {
-    id: "2",
-    mediaName: "RTI - JT 20h",
-    journalistName: "Sekou Diallo",
-    mediaType: "tv",
-    intervieweeName: "Mme la Directrice",
-    intervieweeRole: "Directrice Generale de la Sante",
-    topic: "Campagne de vaccination meningite — resultats et prochaines etapes",
-    scheduledAt: "16 avril 2026, 18h30",
-    status: "generating",
-    questionsCount: 0,
-    keyMessages: [],
-    createdAt: "Il y a 30 min",
-  },
-  {
-    id: "3",
-    mediaName: "RFI Abidjan",
-    journalistName: "Marie Konan",
-    mediaType: "radio",
-    intervieweeName: "M. le Ministre",
-    intervieweeRole: "Ministre de l'Economie",
-    topic: "Perspectives economiques Cote d'Ivoire 2026-2027",
-    scheduledAt: "12 avril 2026, 09h00",
-    status: "used",
-    questionsCount: 12,
-    keyMessages: ["Croissance 7,2% attendue", "3 zones industrielles en construction", "Partenariat Banque Mondiale renforce"],
-    createdAt: "Il y a 3j",
-  },
-  {
-    id: "4",
-    mediaName: "Abidjan.net",
-    journalistName: "Ibrahim Traore",
-    mediaType: "web",
-    intervieweeName: "M. le Maire",
-    intervieweeRole: "Maire de Cocody",
-    topic: "Polemique gestion des ordures — droit de reponse",
-    scheduledAt: "Non planifie",
-    status: "draft",
-    questionsCount: 0,
-    keyMessages: [],
-    createdAt: "Il y a 1j",
-  },
-];
 
 export default function BriefsPage() {
   const [statusFilter, setStatusFilter] = useState<BriefStatus | "all">("all");
+  const [mockBriefs, setMockBriefs] = useState<Brief[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get<any>("/briefs")
+      .then((res) => setMockBriefs(res.data ?? []))
+      .catch(() => setMockBriefs([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div className="flex items-center justify-center min-h-[40vh]"><Loader2 className="w-8 h-8 text-gold animate-spin" /></div>;
 
   const filtered = mockBriefs.filter(b => statusFilter === "all" || b.status === statusFilter);
 

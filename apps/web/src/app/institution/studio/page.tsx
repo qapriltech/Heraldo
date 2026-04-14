@@ -14,11 +14,13 @@ import {
   Download,
   Eye,
   Type,
+  Loader2,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
+import { api } from "@/lib/api";
 
 type Category =
   | "all"
@@ -64,119 +66,27 @@ const formatConfig: Record<
   },
 };
 
-const templates: Template[] = [
-  {
-    id: "1",
-    title: "Annonce officielle - Or",
-    category: "annonces",
-    format: "square",
-    colors: ["#C8A45C", "#0D1B3E"],
-    uses: 34,
-  },
-  {
-    id: "2",
-    title: "Evenement ceremonie",
-    category: "evenements",
-    format: "portrait",
-    colors: ["#1A2D5A", "#D4B876"],
-    uses: 21,
-  },
-  {
-    id: "3",
-    title: "Citation du Ministre",
-    category: "citations",
-    format: "square",
-    colors: ["#0D1B3E", "#C8A45C", "#FFFFFF"],
-    uses: 45,
-  },
-  {
-    id: "4",
-    title: "Story inauguration",
-    category: "evenements",
-    format: "story",
-    colors: ["#E8742E", "#C8A45C"],
-    uses: 18,
-  },
-  {
-    id: "5",
-    title: "Bilan realisations",
-    category: "realisations",
-    format: "landscape",
-    colors: ["#0D1B3E", "#1A7A3C"],
-    uses: 12,
-  },
-  {
-    id: "6",
-    title: "Voeux de fin d'annee",
-    category: "voeux",
-    format: "square",
-    colors: ["#C8A45C", "#D4B876", "#FFFFFF"],
-    uses: 8,
-  },
-  {
-    id: "7",
-    title: "Communique de crise",
-    category: "crise",
-    format: "landscape",
-    colors: ["#C0392B", "#0D1B3E"],
-    uses: 5,
-  },
-  {
-    id: "8",
-    title: "Annonce recrutement",
-    category: "annonces",
-    format: "portrait",
-    colors: ["#0E7490", "#0D1B3E"],
-    uses: 15,
-  },
-  {
-    id: "9",
-    title: "Infographie chiffres cles",
-    category: "realisations",
-    format: "square",
-    colors: ["#0D1B3E", "#C8A45C", "#E8742E"],
-    uses: 29,
-  },
-  {
-    id: "10",
-    title: "Story agenda semaine",
-    category: "evenements",
-    format: "story",
-    colors: ["#1A2D5A", "#C8A45C"],
-    uses: 22,
-  },
-  {
-    id: "11",
-    title: "Citation partenaire",
-    category: "citations",
-    format: "landscape",
-    colors: ["#6C3483", "#C8A45C"],
-    uses: 7,
-  },
-  {
-    id: "12",
-    title: "Alerte crise sanitaire",
-    category: "crise",
-    format: "square",
-    colors: ["#C0392B", "#FFFFFF"],
-    uses: 3,
-  },
-];
-
-const recentVisuals = [
-  { title: "Bilan Q1 2026 - Infographie", date: "10 avr 2026", format: "square" as Format },
-  { title: "Story inauguration port", date: "8 avr 2026", format: "story" as Format },
-  { title: "Communique reforme", date: "5 avr 2026", format: "landscape" as Format },
-  { title: "Citation Ministre - PIB", date: "3 avr 2026", format: "square" as Format },
-];
-
-const brandKit = {
+const defaultBrandKit = {
   colors: ["#0D1B3E", "#C8A45C", "#E8742E", "#FFFFFF", "#1A7A3C"],
   fonts: ["DM Sans", "DM Serif Display"],
 };
 
 export default function StudioPage() {
   const [activeCategory, setActiveCategory] = useState<Category>("all");
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [recentVisuals, setRecentVisuals] = useState<{ title: string; date: string; format: Format }[]>([]);
+  const [brandKit, setBrandKit] = useState<{ colors: string[]; fonts: string[] }>(defaultBrandKit);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      api.get<any>("/studio/templates").then((res) => setTemplates(res.data ?? [])).catch(() => {}),
+      api.get<any>("/studio/brand-kit").then((res) => setBrandKit(res.data ?? res ?? defaultBrandKit)).catch(() => {}),
+      api.get<any>("/studio/visuals").then((res) => setRecentVisuals(res.data ?? [])).catch(() => {}),
+    ]).finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div className="flex items-center justify-center min-h-[40vh]"><Loader2 className="w-8 h-8 text-gold animate-spin" /></div>;
 
   const filtered =
     activeCategory === "all"

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Facebook,
@@ -17,146 +18,13 @@ import {
   Clock,
   Newspaper,
   Users,
+  Loader2,
 } from "lucide-react";
 import Link from "next/link";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
-
-const connectedAccounts = [
-  {
-    platform: "Facebook",
-    icon: Facebook,
-    handle: "@MinistereEconomie",
-    followers: "245K",
-    status: "connected" as const,
-    color: "text-blue-600",
-    bg: "bg-blue-600/10",
-  },
-  {
-    platform: "Instagram",
-    icon: Instagram,
-    handle: "@minecoCI",
-    followers: "89K",
-    status: "connected" as const,
-    color: "text-pink-500",
-    bg: "bg-pink-500/10",
-  },
-  {
-    platform: "LinkedIn",
-    icon: Linkedin,
-    handle: "Ministere de l'Economie CI",
-    followers: "34K",
-    status: "connected" as const,
-    color: "text-blue-700",
-    bg: "bg-blue-700/10",
-  },
-];
-
-const recentPublications = [
-  {
-    title: "Bilan economique Q1 2026",
-    platform: "Facebook",
-    date: "10 avr 2026",
-    likes: 1240,
-    comments: 89,
-    shares: 312,
-    image: null,
-    status: "published" as const,
-  },
-  {
-    title: "Inauguration du port autonome",
-    platform: "Instagram",
-    date: "8 avr 2026",
-    likes: 3450,
-    comments: 256,
-    shares: 128,
-    image: null,
-    status: "published" as const,
-  },
-  {
-    title: "Communique - Nouveaux accords",
-    platform: "LinkedIn",
-    date: "7 avr 2026",
-    likes: 890,
-    comments: 45,
-    shares: 201,
-    image: null,
-    status: "published" as const,
-  },
-  {
-    title: "Infographie croissance PIB",
-    platform: "Facebook",
-    date: "5 avr 2026",
-    likes: 2100,
-    comments: 134,
-    shares: 567,
-    image: null,
-    status: "published" as const,
-  },
-  {
-    title: "Video - Discours du Ministre",
-    platform: "Instagram",
-    date: "3 avr 2026",
-    likes: 5600,
-    comments: 412,
-    shares: 289,
-    image: null,
-    status: "published" as const,
-  },
-  {
-    title: "Rapport annuel disponible",
-    platform: "LinkedIn",
-    date: "1 avr 2026",
-    likes: 670,
-    comments: 32,
-    shares: 145,
-    image: null,
-    status: "published" as const,
-  },
-];
-
-const scheduledPosts = [
-  { title: "Post budget 2027", date: "14 avr", platform: "Facebook" },
-  { title: "Story coulisses bureau", date: "15 avr", platform: "Instagram" },
-  { title: "Article reforme fiscale", date: "16 avr", platform: "LinkedIn" },
-  { title: "Infographie emploi jeunes", date: "18 avr", platform: "Facebook" },
-];
-
-const kpis = [
-  {
-    label: "Portee totale ce mois",
-    value: "1.8M",
-    change: "+22% vs mars",
-    icon: Eye,
-    color: "text-gold",
-    bg: "bg-gold/10",
-  },
-  {
-    label: "Taux d'engagement",
-    value: "4.7%",
-    change: "+0.8 pts",
-    icon: BarChart3,
-    color: "text-orange",
-    bg: "bg-orange/10",
-  },
-  {
-    label: "Abonnes totaux",
-    value: "368K",
-    change: "+2.1K ce mois",
-    icon: Users,
-    color: "text-green",
-    bg: "bg-green/10",
-  },
-  {
-    label: "Meilleur post",
-    value: "5.6K",
-    change: "Video Discours",
-    icon: TrendingUp,
-    color: "text-blue-500",
-    bg: "bg-blue-500/10",
-  },
-];
+import { api } from "@/lib/api";
 
 const platformIcon = (name: string) => {
   if (name === "Facebook") return Facebook;
@@ -165,6 +33,31 @@ const platformIcon = (name: string) => {
 };
 
 export default function SocialDashboard() {
+  const [connectedAccounts, setConnectedAccounts] = useState<any[]>([]);
+  const [recentPublications, setRecentPublications] = useState<any[]>([]);
+  const [scheduledPosts, setScheduledPosts] = useState<any[]>([]);
+  const [kpis, setKpis] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      api.get<any>("/social/accounts").then((res) => {
+        const data = res.data ?? res;
+        setConnectedAccounts(Array.isArray(data) ? data : []);
+      }).catch(() => {}),
+      api.get<any>("/social/posts").then((res) => {
+        const data = res.data ?? res;
+        if (Array.isArray(data)) {
+          setRecentPublications(data.filter((p: any) => p.status === "published"));
+          setScheduledPosts(data.filter((p: any) => p.status === "scheduled"));
+        }
+        if (res.kpis) setKpis(res.kpis);
+      }).catch(() => {}),
+    ]).finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div className="flex items-center justify-center min-h-[40vh]"><Loader2 className="w-8 h-8 text-gold animate-spin" /></div>;
+
   return (
     <>
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
