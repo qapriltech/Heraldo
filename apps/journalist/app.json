@@ -1,0 +1,56 @@
+{
+  "expo": {
+    "name": "HÉRALDO Journaliste",
+    "slug": "heraldo-journalist",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "heraldo-journalist",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#0D1B3E",
+      "resizeMode": "contain"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "ci.heraldo.journalist",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "HÉRALDO utilise le microphone pour enregistrer vos interviews",
+        "NSSpeechRecognitionUsageDescription": "HÉRALDO utilise la reconnaissance vocale pour transcrire vos enregistrements",
+        "NSCameraUsageDescription": "HÉRALDO utilise la caméra pour prendre des photos",
+        "NSPhotoLibraryUsageDescription": "HÉRALDO accède à vos photos pour le profil et les publications"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0D1B3E"
+      },
+      "package": "ci.heraldo.journalist",
+      "permissions": [
+        "RECORD_AUDIO",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-sqlite",
+      [
+        "expo-av",
+        {
+          "microphonePermission": "HÉRALDO utilise le microphone pour enregistrer vos interviews."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#E8742E"
+        }
+      ]
+    ]
+  }
+}
