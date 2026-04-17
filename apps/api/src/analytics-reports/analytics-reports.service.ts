@@ -64,15 +64,22 @@ export class AnalyticsReportsService {
     // Rank journalists by number of articles/publications linked to this institution
     const targets = await this.prisma.communiqueTarget.findMany({
       where: { communique: { institutionId } },
-      include: { journalist: { include: { user: { select: { fullName: true } } } } },
     });
+
+    // Collect unique journalist IDs
+    const journalistIds = [...new Set(targets.filter(t => t.journalistId).map(t => t.journalistId!))];
+    const journalists = await this.prisma.journalist.findMany({
+      where: { id: { in: journalistIds } },
+      include: { user: { select: { fullName: true } } },
+    });
+    const journalistNames = new Map(journalists.map(j => [j.id, j.user.fullName]));
 
     const journalistMap = new Map<string, { id: string; name: string; articles: number; openCount: number }>();
     for (const t of targets) {
       if (!t.journalistId) continue;
       const existing = journalistMap.get(t.journalistId) || {
         id: t.journalistId,
-        name: t.journalist?.user?.fullName || 'Inconnu',
+        name: journalistNames.get(t.journalistId) || 'Inconnu',
         articles: 0,
         openCount: 0,
       };
