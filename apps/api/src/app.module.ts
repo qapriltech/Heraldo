@@ -32,6 +32,11 @@ import { AdminUsageModule } from './admin-usage/admin-usage.module';
 import { AdminAccreditationsModule } from './admin-accreditations/admin-accreditations.module';
 import { AdminAlertsModule } from './admin-alerts/admin-alerts.module';
 import { OdooSyncModule } from './odoo-sync/odoo-sync.module';
+import { VeilleModule } from './veille/veille.module';
+import { AnalyticsReportsModule } from './analytics-reports/analytics-reports.module';
+import { CitizenModule } from './citizen/citizen.module';
+import { ArchiveModule } from './archive/archive.module';
+import { AccreditModule } from './accredit/accredit.module';
 
 @Module({
   imports: [
@@ -66,6 +71,11 @@ import { OdooSyncModule } from './odoo-sync/odoo-sync.module';
     AdminAccreditationsModule,
     AdminAlertsModule,
     OdooSyncModule,
+    VeilleModule,
+    AnalyticsReportsModule,
+    CitizenModule,
+    ArchiveModule,
+    AccreditModule,
   ],
   providers: [
     {

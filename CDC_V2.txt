@@ -1,0 +1,410 @@
+HERALDO
+Cahier des Charges Fonctionnel — Version 2.0
+Plateforme de communication institutionnelle — Écosystème complet 9 modules
+Référence
+HP-CDC-FONC-V2-2026
+Version
+2.0 — Écosystème étendu
+Éditeur
+AUXX SAS — Abidjan, Côte d'Ivoire
+Produit
+HERALDO — Communication institutionnelle
+Modules couverts
+PRESS + LIVE + VEILLE + ANALYTICS + CITIZEN + ARCHIVE + ACCREDIT + RÉSEAU + INTERNE
+Date
+Avril 2026
+
+
+
+
+
+1. Vision produit et stratégie
+1.1 Positionnement
+HERALDO est la plateforme de communication institutionnelle officielle des institutions d'Afrique de l'Ouest, éditée par AUXX SAS. Elle permet à toute institution publique — ministère, mairie, Assemblée Nationale, Présidence — de maîtriser sa communication externe vers les journalistes et le public, et progressivement sa coordination interne.
+
+Principe stratégique : HERALDO entre par la communication de presse (module PRESS), crée la dépendance par la valeur, et s'enrichit progressivement de 8 modules additionnels activables selon la maturité et les besoins de chaque institution. Chaque module augmente le ticket et rend le départ plus difficile.
+
+1.2 Architecture en 9 modules
+#
+Module
+Usage
+Priorité
+Statut
+M1
+HERALDO PRESS
+Communication presse externe
+P0
+V1 — Core
+M2
+HERALDO RÉSEAU
+Extension directions régionales
+P0
+V1
+M3
+HERALDO INTERNE
+Notes de service internes
+P0
+V1
+M4
+HERALDO LIVE
+Conférences hybrides en direct
+P0
+V1
+M5
+HERALDO VEILLE
+Surveillance médiatique automatique
+P0
+V1
+M6
+HERALDO ANALYTICS
+Mesure d'impact réel
+P0
+V1
+M7
+HERALDO CITIZEN
+Canal direct citoyens
+P1
+V2
+M8
+HERALDO ARCHIVE
+Mémoire institutionnelle
+P1
+V2
+M9
+HERALDO ACCREDIT
+Accréditations journalistes
+P1
+V2
+
+
+2. Modules fondateurs — V1
+Module M1 — HERALDO PRESS
+Module fondateur. Point d'entrée dans l'écosystème. Il doit être simple, immédiatement utile et décisionnable seul par le chargé de communication sans validation hiérarchique.
+
+Fonctionnalités
+	•	Annuaire des journalistes accrédités : profil complet, médias associés, spécialités, historique de couverture, statut actif/inactif.
+	•	Composition et envoi de communiqués : éditeur riche, pièces jointes, images, envoi immédiat ou programmé.
+	•	Segmentation des destinataires : par média, spécialité, région, langue, liste personnalisée.
+	•	Accusé de réception et de lecture : horodaté, avec relance automatique paramétrable.
+	•	Tableau de bord d'envoi : taux d'ouverture, taux de clic, médias actifs vs inactifs.
+	•	Gestion des conférences de presse : invitation, confirmation, liste de présence, compte-rendu.
+	•	Templates de communiqués : modèles pré-formatés conformes aux standards institutionnels ivoiriens.
+	•	Historique complet des envois consultable et filtrable.
+
+Module M2 — HERALDO RÉSEAU
+Extension naturelle de PRESS. Permet d'inclure les directions régionales et les points focaux communication des structures sous tutelle dans la boucle d'information.
+
+Fonctionnalités
+	•	Annuaire des points focaux communication par direction régionale, préfecture, établissement sous tutelle.
+	•	Diffusion simultanée journalistes + directions régionales en un seul envoi.
+	•	Différenciation des messages : version presse publique vs version interne étendue.
+	•	Carte de couverture : visualisation géographique des directions atteintes en temps réel.
+	•	Tableau de bord réseau : taux de lecture par direction, retards, points de blocage.
+
+Module M3 — HERALDO INTERNE
+Glissement naturel de la communication externe vers la coordination interne. Le Secrétaire Général pilote l'information descendante.
+
+Fonctionnalités
+	•	Rédaction et envoi de notes de service, circulaires, directives internes.
+	•	Accusé de réception obligatoire avec horodatage et signature numérique.
+	•	Niveaux de confidentialité : normal, restreint, confidentiel.
+	•	Relance automatique des non-lecteurs après délai paramétrable.
+	•	Tableau de bord Secrétaire Général : suivi temps réel, rapport hebdomadaire automatique.
+	•	Alertes de non-réception escaladées à la hiérarchie après seuil configurable.
+
+
+3. Nouveaux modules — Écosystème étendu
+
+MODULE M4 — HERALDO LIVE
+Les conférences de presse franchissent les frontières — hybrides, en direct, archivées
+
+Audience cible
+Chargé de communication, Directeur de la communication, Cabinet ministériel
+Priorité
+P0 — V1
+Budget développement estimé
+6 000 000 à 8 000 000 FCFA
+KPI principal
+Taux de participation journalistes distants > 40% des accrédités
+
+Problématique résolue
+Les conférences de presse restent des événements physiques contraints par la géographie. Les journalistes en région, la diaspora presse à Paris ou à Washington, et les correspondants étrangers ne peuvent pas se déplacer. L'information officielle est transmise avec retard, parfois déformée. Aucune institution ivoirienne ne dispose aujourd'hui d'un outil de diffusion hybride souverain pour ses conférences de presse.
+
+Fonctionnalités détaillées
+Diffusion en direct
+	•	Streaming vidéo HD sécurisé vers tous les journalistes accrédités sur la plateforme HERALDO.
+	•	Lien de connexion personnalisé et non-partageable envoyé à chaque accrédité 24h avant.
+	•	Salle virtuelle sécurisée : seuls les accrédités valides accèdent au direct.
+	•	Vue régie pour l'animateur : liste des connectés, file de questions, chronomètre.
+Interaction en temps réel
+	•	Module questions-réponses : les journalistes soumettent leurs questions via la plateforme, l'animateur sélectionne et donne la parole.
+	•	Chat modéré en temps réel entre accrédités et équipe de communication.
+	•	Vote de pertinence sur les questions soumises — les plus votées remontent en priorité.
+Post-événement
+	•	Replay automatique disponible dans les 30 minutes suivant la conférence.
+	•	Transcription automatique en français avec identification des intervenants.
+	•	Découpe automatique par question-réponse pour faciliter la citation.
+	•	Archivage dans HERALDO ARCHIVE avec métadonnées complètes.
+	•	Rapport de participation : qui s'est connecté, durée de visionnage, questions posées.
+
+
+MODULE M5 — HERALDO VEILLE
+Savoir ce qui se dit avant que votre ministre l'apprenne ailleurs
+
+Audience cible
+Chargé de communication, Directeur de la communication, Cabinet — Cellule de crise
+Priorité
+P0 — V1
+Budget développement estimé
+8 000 000 à 12 000 000 FCFA
+KPI principal
+Délai moyen de détection d'une mention < 5 minutes
+
+Problématique résolue
+Un chargé de communication apprend aujourd'hui ce qui se dit sur son institution par hasard — en lisant les journaux, via des alertes Google approximatives, ou quand le cabinet l'appelle en urgence. Il n'existe aucun outil de veille médiatique automatisé, complet et souverain pour les institutions ivoiriennes. Les outils internationaux (Mention, Talkwalker) sont chers, en anglais, et ne couvrent pas les médias locaux ivoiriens.
+
+Fonctionnalités détaillées
+Sources surveillées
+	•	Presse en ligne ivoirienne : Connectionivoirienne, Abidjan.net, LePoinPur.ci, Fratmat, Soir Info et 50+ sources indexées.
+	•	Réseaux sociaux : Facebook, X (Twitter), LinkedIn — mentions, hashtags, reposts.
+	•	Radios et TV : transcription des journaux parlés des principales chaînes nationales.
+	•	Presse diaspora : médias ivoiriens de France, Belgique, États-Unis.
+	•	WhatsApp public : groupes de presse et canaux d'information publics.
+Alertes et monitoring
+	•	Alertes temps réel : notification push mobile + email dès qu'une mention est détectée.
+	•	Qualification automatique : positive / négative / neutre par analyse sémantique.
+	•	Score de tonalité par source et par période.
+	•	Détection de pic : alerte spéciale quand le volume de mentions dépasse le seuil normal (crise potentielle).
+Tableau de bord de veille
+	•	Vue temps réel : fil des mentions classées par pertinence et tonalité.
+	•	Rapport matinal automatique : résumé des 24 dernières heures envoyé à 7h00.
+	•	Comparaison concurrentielle : positionnement médiatique vs autres ministères ou institutions.
+Module gestion de crise
+	•	Déclenchement manuel ou automatique du mode crise.
+	•	Espace de coordination interne : cellule de crise virtuelle, fil de décision, brouillon de réponse officielle.
+	•	Chronomètre de réponse : temps écoulé depuis la première mention vs délai cible.
+
+
+MODULE M6 — HERALDO ANALYTICS
+De l'envoi à l'impact réel — la communication institutionnelle devient mesurable
+
+Audience cible
+Directeur de la communication, Secrétaire Général, Ministre — Rapport mensuel d'activité
+Priorité
+P0 — V1
+Budget développement estimé
+5 000 000 à 7 000 000 FCFA
+KPI principal
+Rapport mensuel automatique utilisé par 80% des SG dans les 3 mois
+
+Problématique résolue
+Les chargés de communication ne peuvent pas prouver la valeur de leur travail. Ils envoient des communiqués sans savoir combien de lecteurs ont finalement été touchés. Les ministres allouent des budgets communication sans aucune mesure de retour sur investissement. HERALDO ANALYTICS transforme la communication institutionnelle en activité mesurable et pilotable.
+
+Fonctionnalités détaillées
+Mesure d'impact réel
+	•	Portée finale estimée : croisement des données d'ouverture HERALDO avec l'audience déclarée de chaque média pour estimer le nombre de lecteurs finaux touchés.
+	•	Taux de conversion communiqué → article : quelle proportion des envois génèrent effectivement une publication.
+	•	Délai moyen de publication : combien de temps entre l'envoi et la parution dans les médias.
+Classement des journalistes et médias
+	•	Score d'impact par journaliste : qui génère le plus de portée pour l'institution.
+	•	Fidélité des médias : taux de publication par média sur 3, 6 et 12 mois.
+	•	Carte de chaleur médiatique : quels médias couvrent quelles thématiques.
+Rapports automatiques
+	•	Rapport hebdomadaire pour le chargé de com : activité, taux, tendances.
+	•	Rapport mensuel pour le Secrétaire Général : KPIs, comparatif mois précédent, recommandations.
+	•	Rapport trimestriel pour le Ministre : synthèse stratégique, positionnement médiatique, budget communication justifié.
+	•	Export PDF + PowerPoint en un clic pour présentation au cabinet.
+Analyse thématique
+	•	Quelles thématiques génèrent le plus de couverture médiatique.
+	•	Analyse de sentiment : évolution de la tonalité sur les sujets clés du ministère.
+	•	Suggestions d'optimisation : heures d'envoi optimales, jours de la semaine, formats les plus efficaces.
+
+
+MODULE M7 — HERALDO CITIZEN
+Un envoi, trois canaux — journaliste, fonctionnaire, citoyen. En une action.
+
+Audience cible
+Mairies, directions régionales, Ministère de l'Intérieur — Communication de proximité
+Priorité
+P1 — V2
+Budget développement estimé
+7 000 000 à 10 000 000 FCFA
+KPI principal
+Taux d'abonnement citoyen > 5% de la population de la commune cible en 6 mois
+
+Problématique résolue
+Les institutions communiquent vers les journalistes mais pas directement vers les citoyens. Une coupure d'eau, un arrêté municipal, une décision de justice locale — le citoyen l'apprend par hasard ou pas du tout. Les mairies n'ont aucun outil pour toucher leurs administrés directement. HERALDO CITIZEN ouvre un canal direct citoyen depuis la même interface que la communication presse.
+
+Fonctionnalités détaillées
+Multi-canal natif
+	•	Un seul envoi depuis HERALDO déclenche simultanément : notification presse sur HERALDO, SMS aux abonnés de la liste citoyenne, message WhatsApp Business vers le canal officiel de la mairie / direction.
+	•	Personnalisation du message par canal : version longue pour la presse, version courte pour SMS, version avec emoji pour WhatsApp.
+Segmentation géographique
+	•	Base de données citoyens par commune, quartier, arrondissement.
+	•	Ciblage géographique précis : alertes uniquement pour les habitants concernés (ex : coupure d'eau dans un quartier spécifique).
+	•	Abonnement libre des citoyens via QR code affiché en mairie ou sur le site officiel.
+Types de messages citoyens
+	•	Alertes urgentes : coupures de service, intempéries, événements de sécurité.
+	•	Informations pratiques : horaires, marchés, convocations, résultats.
+	•	Actes officiels : arrêtés, délibérations, avis de recrutement.
+	•	Événements et agenda municipal.
+Conformité et opt-out
+	•	Consentement citoyen documenté à l'inscription — conformité RGPD et législation ivoirienne.
+	•	Désinscription possible à tout moment via SMS STOP ou lien dans le message.
+	•	Registre des consentements accessible à l'institution.
+
+
+MODULE M8 — HERALDO ARCHIVE
+La mémoire institutionnelle officielle — tout ce que votre institution a dit, pour toujours
+
+Audience cible
+Directions de la communication, Secrétariats Généraux, Archives nationales, Journalistes, Chercheurs
+Priorité
+P1 — V2
+Budget développement estimé
+4 000 000 à 6 000 000 FCFA
+KPI principal
+100% des communications archivées et retrouvables en < 30 secondes
+
+Problématique résolue
+Les institutions n'ont pas de mémoire numérique organisée. Les communiqués sont perdus dans des boîtes mail. Les discours ne sont accessibles que si quelqu'un les a sauvegardés. Un journaliste qui cherche la position officielle d'un ministère sur un sujet en 2022 ne peut pas la retrouver facilement. HERALDO ARCHIVE crée automatiquement la bibliothèque numérique souveraine de chaque institution.
+
+Fonctionnalités détaillées
+Constitution automatique de l'archive
+	•	Tout communiqué envoyé via HERALDO est automatiquement archivé avec ses métadonnées complètes : auteur, date, heure, destinataires, taux de lecture.
+	•	Import rétroactif : possibilité d'importer les archives existantes (PDF, Word, emails) pour reconstituer l'historique.
+	•	Transcription automatique des conférences HERALDO LIVE archivées.
+Organisation et recherche
+	•	Indexation full-text : recherche dans le contenu de tous les documents.
+	•	Classement par thématique, date, auteur, type de document, niveau de confidentialité.
+	•	Système de tags personnalisables par institution.
+	•	Recherche avancée multicritères avec filtres combinables.
+Valeur probatoire et horodatage
+	•	Chaque document archivé reçoit un hash cryptographique garantissant son intégrité — aucune modification possible après archivage.
+	•	Horodatage légal certifié : date et heure de publication officielle opposable.
+	•	Certificat d'authenticité téléchargeable pour chaque document archivé.
+Accès et partage
+	•	Interface publique optionnelle : l'institution choisit quels documents sont accessibles au public (transparence) vs réservés en interne.
+	•	API publique pour les journalistes et chercheurs accrédités.
+	•	Export de corpus documentaire pour rapports parlementaires ou procédures judiciaires.
+
+
+MODULE M9 — HERALDO ACCREDIT
+La plateforme officielle d'accréditation des journalistes ivoiriens — QR code, dossier numérique, annuaire de référence
+
+Audience cible
+Directions de la communication de toutes les institutions, journalistes, rédactions
+Priorité
+P1 — V2
+Budget développement estimé
+5 000 000 à 7 000 000 FCFA
+KPI principal
+HERALDO ACCREDIT devient le standard pour 80% des institutions membres en 18 mois
+
+Problématique résolue
+La gestion des accréditations journalistes est un chaos dans toutes les institutions ivoiriennes. Chaque ministère a sa propre liste, souvent sur Excel. Les accréditations expirent sans être renouvelées. Des journalistes non accrédités accèdent aux événements, des journalistes légitimes sont refusés faute de coordination. HERALDO ACCREDIT crée un standard national d'accréditation numérique.
+
+Fonctionnalités détaillées
+Dossier d'accréditation numérique
+	•	Formulaire de demande d'accréditation en ligne : identité, carte de presse, média employeur, spécialités, langues.
+	•	Validation par l'institution : workflow d'approbation avec niveaux de validation (chargé de com → directeur).
+	•	Durée et périmètre : accréditation permanente, annuelle, ou événementielle.
+	•	Historique complet : toutes les accréditations passées d'un journaliste, tous les événements auxquels il a participé.
+QR code d'accès sécurisé
+	•	Chaque journaliste accrédité dispose d'un QR code unique, vérifiable instantanément à l'entrée des événements.
+	•	Application de vérification pour les agents d'accueil — scan QR code, affichage immédiat du statut.
+	•	QR code temporaire pour les événements ponctuels, différent de l'accréditation permanente.
+	•	Invalidation instantanée en cas de problème — l'accréditation devient inactive en un clic.
+Annuaire de référence
+	•	Base de données nationale des journalistes accrédités auprès des institutions membres HERALDO.
+	•	Profil public de chaque journaliste : médias, spécialités, coordonnées professionnelles.
+	•	Moteur de recherche pour trouver le bon journaliste selon la thématique d'un communiqué.
+	•	Statistiques de couverture par journaliste : nombre d'articles publiés sur les institutions, tonalité moyenne.
+Valeur de réseau
+	•	Dès que la Primature adopte HERALDO ACCREDIT, les autres institutions rejoignent naturellement pour éviter d'avoir des systèmes parallèles.
+	•	HERALDO devient le standard national — toute accréditation institutionnelle passe par HERALDO.
+
+
+4. Budget de développement consolidé
+4.1 Récapitulatif par module
+#
+Module
+Priorité
+Budget min
+Budget max
+M1
+HERALDO PRESS
+P0 — V1
+8 000 000
+12 000 000
+M2
+HERALDO RÉSEAU
+P0 — V1
+3 000 000
+5 000 000
+M3
+HERALDO INTERNE
+P0 — V1
+4 000 000
+6 000 000
+M4
+HERALDO LIVE
+P0 — V1
+6 000 000
+8 000 000
+M5
+HERALDO VEILLE
+P0 — V1
+8 000 000
+12 000 000
+M6
+HERALDO ANALYTICS
+P0 — V1
+5 000 000
+7 000 000
+M7
+HERALDO CITIZEN
+P1 — V2
+7 000 000
+10 000 000
+M8
+HERALDO ARCHIVE
+P1 — V2
+4 000 000
+6 000 000
+M9
+HERALDO ACCREDIT
+P1 — V2
+5 000 000
+7 000 000
+TOTAL GÉNÉRAL
+50 000 000
+73 000 000
+
+V1 (6 modules P0) : 34 000 000 à 50 000 000 FCFA — à financer avant le premier RDV institutionnel. V2 (3 modules P1) : 16 000 000 à 23 000 000 FCFA — à financer sur les premiers revenus clients. ROI : un seul contrat annuel Ministère à 18 000 000 FCFA couvre intégralement le budget V1.
+
+5. Roadmap de développement
+Phase
+Durée
+Modules
+Jalon
+Phase 0
+S1-S4 (1 mois)
+Architecture technique, infrastructure, CI/CD
+Environnement de dev opérationnel
+Phase 1
+S5-S12 (2 mois)
+M1 PRESS + M2 RÉSEAU
+MVP testable — premier client pilote
+Phase 2
+S13-S20 (2 mois)
+M3 INTERNE + M6 ANALYTICS
+Version complète V1 couches 1-3
+Phase 3
+S21-S28 (2 mois)
+M4 LIVE + M5 VEILLE
+V1 complète — lancement commercial
+Phase 4
+S29-S40 (3 mois)
+M7 CITIZEN + M8 ARCHIVE + M9 ACCREDIT
+V2 — écosystème complet

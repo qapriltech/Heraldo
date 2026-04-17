@@ -1,0 +1,401 @@
+HERALDO
+Cahier des Spécifications Techniques
+Architecture · Stack · APIs · Sécurité · Infrastructure · Performance
+Référence
+HP-CST-V1-2026
+Version
+1.0 — Document fondateur
+Destinataire
+Équipe technique AUXX — Développeurs, DevOps, Architectes
+Produit
+HERALDO — 9 modules
+Date
+Avril 2026
+Dépendances
+HP-CDC-FONC-V2-2026 (CDC Fonctionnel)
+
+
+
+
+
+1. Architecture générale
+1.1 Principe d'architecture
+HERALDO est une application web SaaS multi-tenant isolée. Chaque institution cliente dispose d'une instance logique séparée avec sa propre base de données, son propre espace de stockage et son propre sous-domaine. L'isolation est logique en V1 et physique (on-premise) pour HERALDO SOUVERAIN.
+
+1.2 Architecture applicative — Vue d'ensemble
+HERALDO suit une architecture en 3 couches : Frontend (client web), Backend (API REST + services), Infrastructure (base de données, stockage, queues).
+
+Couche
+Technologie
+Rôle
+Frontend
+Next.js 14 (React) + TypeScript
+Interface utilisateur — SSR + SPA hybride
+API Gateway
+Nginx + Node.js (Express)
+Routage, rate limiting, auth, logging
+Backend services
+Node.js (NestJS) + TypeScript
+Services métier modulaires
+Base de données
+PostgreSQL 15
+Données relationnelles — une instance par tenant
+Cache
+Redis 7
+Sessions, cache API, queues de traitement
+Stockage fichiers
+MinIO (S3-compatible)
+Pièces jointes, médias, archives
+Queue asynchrone
+Bull (Redis-based)
+Envois différés, traitements lourds, notifications
+Temps réel
+Socket.io
+Notifications live, tableau de bord temps réel
+Search
+Elasticsearch 8
+Indexation et recherche full-text ARCHIVE
+Streaming vidéo
+MediaSoup (WebRTC)
+Module LIVE — diffusion temps réel
+
+
+1.3 Architecture multi-tenant
+HERALDO utilise un modèle multi-tenant avec isolation par schéma PostgreSQL (schema-per-tenant). Chaque institution dispose de son propre schéma dans la base de données, avec ses propres tables, index et séquences. L'application routing détermine le tenant via le sous-domaine ou un header HTTP spécifique.
+
+Structure des sous-domaines
+	•	Format : {institution}.heraldo.ci — ex: primature.heraldo.ci, mint.heraldo.ci
+	•	Certificat SSL wildcard *.heraldo.ci géré via Let's Encrypt + Certbot.
+	•	Fallback : heraldo.ci/{institution} pour les accès sans sous-domaine configuré.
+
+Isolation des données
+	•	Chaque tenant a son propre schéma PostgreSQL — aucune requête ne peut traverser les schémas sans privilège explicite.
+	•	Les fichiers MinIO sont organisés en buckets séparés par tenant_id avec ACL strictes.
+	•	Les clés de chiffrement Redis sont préfixées par tenant_id — impossible d'accéder aux données d'un autre tenant.
+
+2. Stack technique détaillé
+2.1 Frontend — Next.js 14
+Technologie
+Version
+Usage
+Next.js
+14.x
+Framework React — SSR + App Router
+TypeScript
+5.x
+Typage statique obligatoire
+Tailwind CSS
+3.x
+Styling utilitaire
+React Query
+5.x
+State management serveur + cache
+Zustand
+4.x
+State management client léger
+Recharts
+2.x
+Graphiques Analytics
+Socket.io client
+4.x
+Notifications temps réel
+i18next
+23.x
+Internationalisation FR/EN
+
+2.2 Backend — NestJS
+Technologie
+Version
+Usage
+NestJS
+10.x
+Framework Node.js modulaire
+TypeORM
+0.3.x
+ORM PostgreSQL + migrations
+Passport.js
+0.7.x
+Authentification — JWT + OAuth
+Bull
+4.x
+Queue de traitement asynchrone
+Nodemailer
+6.x
+Envoi emails transactionnels
+WhatsApp Business API
+Cloud API
+Module CITIZEN — WhatsApp
+Twilio
+SDK Node
+SMS + backup notifications
+OpenAI API
+GPT-4o
+Transcription + analyse sémantique VEILLE
+MediaSoup
+3.x
+WebRTC serveur — module LIVE
+
+
+3. Architecture API REST
+3.1 Conventions
+L'API HERALDO est une REST API versionnée. Toutes les routes sont préfixées par /api/v1/. L'authentification est basée sur JWT avec refresh tokens. Toutes les réponses sont au format JSON avec une structure cohérente.
+
+Méthode
+Pattern
+Usage
+GET
+/api/v1/{resource}
+Liste paginée avec filtres
+GET
+/api/v1/{resource}/{id}
+Ressource unique
+POST
+/api/v1/{resource}
+Création
+PATCH
+/api/v1/{resource}/{id}
+Mise à jour partielle
+DELETE
+/api/v1/{resource}/{id}
+Suppression logique (soft delete)
+
+3.2 Principaux endpoints par module
+Module PRESS — Communiqués
+	•	POST /api/v1/communiques — Créer et envoyer un communiqué
+	•	GET /api/v1/communiques — Liste avec filtres (date, statut, auteur)
+	•	GET /api/v1/communiques/{id}/stats — Statistiques de lecture
+	•	POST /api/v1/communiques/{id}/relance — Déclencher une relance
+	•	GET /api/v1/journalistes — Annuaire avec pagination et recherche
+	•	POST /api/v1/journalistes/import — Import CSV d'un annuaire existant
+
+Module VEILLE — Monitoring
+	•	GET /api/v1/veille/mentions — Fil des mentions en temps réel
+	•	GET /api/v1/veille/alertes — Alertes actives avec niveau de criticité
+	•	POST /api/v1/veille/keywords — Configurer les mots-clés surveillés
+	•	GET /api/v1/veille/rapport — Rapport quotidien / hebdomadaire
+
+Module LIVE — Diffusion
+	•	POST /api/v1/lives — Créer une session LIVE avec paramètres
+	•	GET /api/v1/lives/{id}/token — Obtenir le token d'accès WebRTC
+	•	GET /api/v1/lives/{id}/participants — Liste des connectés en temps réel
+	•	POST /api/v1/lives/{id}/questions — Soumettre une question
+	•	GET /api/v1/lives/{id}/replay — Accéder au replay archivé
+
+Module ANALYTICS — Mesure
+	•	GET /api/v1/analytics/overview — KPIs principaux période glissante
+	•	GET /api/v1/analytics/communiques — Performance par communiqué
+	•	GET /api/v1/analytics/journalistes — Classement par impact
+	•	GET /api/v1/analytics/rapport/pdf — Génération rapport PDF
+
+
+4. Sécurité
+4.1 Authentification et autorisation
+JWT + Refresh Token
+	•	Access token : durée de vie 15 minutes — JWT signé RS256 avec clé privée par tenant.
+	•	Refresh token : durée de vie 7 jours — stocké en base, révocable, rotation à chaque usage.
+	•	Double authentification (2FA) : TOTP via Google Authenticator / Authy — obligatoire pour les rôles Admin et SG.
+	•	SSO optionnel : intégration SAML 2.0 pour les institutions ayant un Active Directory.
+
+RBAC — Gestion des rôles
+Rôle
+Permissions
+Modules accessibles
+SUPER_ADMIN
+Gestion globale de l'instance
+Tous
+ADMIN_INSTITUTION
+Gestion de son institution
+Tous les modules souscrits
+DIRECTEUR_COM
+Envoi, analytics, gestion équipe
+PRESS, RÉSEAU, ANALYTICS, LIVE
+CHARGE_COM
+Envoi communiqués, gestion annuaire
+PRESS, RÉSEAU
+SECRETAIRE_GENERAL
+Lecture analytics, validation
+ANALYTICS, INTERNE (lecture)
+LECTEUR
+Consultation archives uniquement
+ARCHIVE
+
+4.2 Sécurité des données
+Chiffrement
+	•	Données en transit : TLS 1.3 obligatoire — TLS 1.2 accepté pour compatibilité, TLS 1.0/1.1 bloqués.
+	•	Données au repos : chiffrement AES-256-GCM sur les fichiers sensibles (documents confidentiels, pièces jointes NV2/NV3).
+	•	Mots de passe : bcrypt avec salt factor 12 — jamais stockés en clair.
+	•	Secrets applicatifs : stockés dans des variables d'environnement via HashiCorp Vault ou équivalent.
+
+Protection des APIs
+	•	Rate limiting : 100 requêtes/minute par IP, 1000/minute par token authentifié.
+	•	CORS : whitelist stricte des origines autorisées par tenant.
+	•	CSRF protection : tokens CSRF pour toutes les mutations d'état.
+	•	Input validation : validation stricte de tous les inputs via class-validator (NestJS).
+	•	SQL injection : prévention via ORM + requêtes paramétrées exclusivement.
+	•	XSS : sanitization DOMPurify côté client + Content Security Policy headers.
+
+Audit et logging
+	•	Chaque action utilisateur (connexion, envoi, modification, export) est loggée dans un journal d'audit immuable.
+	•	Format de log structuré JSON : timestamp, user_id, tenant_id, action, ip, user_agent, payload_hash.
+	•	Rétention des logs : 12 mois minimum, archivage froid après 3 mois.
+	•	Alertes de sécurité automatiques : tentatives de connexion multiples, accès hors plage horaire, exports massifs.
+
+
+5. Infrastructure et déploiement
+5.1 Architecture de déploiement V1 — Cloud souverain
+En V1, HERALDO est déployé sur un serveur dédié ou cloud localisé en Côte d'Ivoire. La stack de déploiement est conteneurisée via Docker et orchestrée via Docker Compose pour les déploiements simples ou Kubernetes pour les déploiements à grande échelle.
+
+Composant
+Technologie
+Dimensionnement V1
+Serveur applicatif
+Docker + Nginx
+2 vCPU, 4 GB RAM min
+Base de données
+PostgreSQL 15
+4 vCPU, 8 GB RAM, SSD 100 GB
+Cache
+Redis 7
+1 vCPU, 2 GB RAM
+Stockage
+MinIO
+500 GB SSD — extensible
+Search
+Elasticsearch 8
+2 vCPU, 4 GB RAM
+Streaming LIVE
+MediaSoup
+4 vCPU dédiés — GPU optionnel
+Monitoring
+Prometheus + Grafana
+0.5 vCPU, 1 GB RAM
+Backup
+BorgBackup + S3
+Backup quotidien chiffré
+
+5.2 CI/CD — Pipeline de déploiement
+	•	Développeur push sur branche feature → Tests automatiques (Jest + Cypress).
+	•	PR validée par 2 reviewers → Merge sur develop → Déploiement auto sur staging.
+	•	QA validée sur staging → Merge sur main → Déploiement prod avec zero-downtime (blue-green).
+	•	Rollback automatique si les health checks échouent dans les 5 minutes post-déploiement.
+
+Tests obligatoires
+	•	Tests unitaires : couverture minimum 80% sur les services métier critiques.
+	•	Tests d'intégration : tous les endpoints API testés avec données réelles.
+	•	Tests E2E : parcours utilisateur critiques (envoi communiqué, login, analytics).
+	•	Tests de charge : simulation de 1000 utilisateurs simultanés avant chaque release majeure.
+
+5.3 SLA et performance
+Indicateur
+Cible
+Mesure
+Disponibilité
+99,5% / mois
+Monitoring Uptime Robot continu
+Temps de réponse API (P95)
+< 300 ms
+Prometheus + Grafana
+Temps de chargement page
+< 2 secondes
+Lighthouse score > 90
+Délai envoi communiqué
+< 30 secondes pour 1000 destinataires
+Bull queue monitoring
+Délai alerte VEILLE
+< 5 minutes après publication
+Test automatisé quotidien
+RTO (Recovery Time Objective)
+< 4 heures
+Tests de restauration mensuels
+RPO (Recovery Point Objective)
+< 1 heure (backup toutes les heures)
+Vérification automatique backups
+
+
+6. Spécifications techniques modules spéciaux
+6.1 Module LIVE — Architecture WebRTC
+HERALDO LIVE utilise MediaSoup comme Selective Forwarding Unit (SFU) pour la diffusion vidéo. Ce choix permet de gérer jusqu'à 500 spectateurs simultanés sans dégradation de qualité, tout en conservant la latence ultra-faible du WebRTC (< 500ms).
+
+Flux de connexion
+	•	L'animateur démarre la session LIVE via le dashboard HERALDO — MediaSoup crée une room sécurisée.
+	•	HERALDO génère un token JWT unique pour chaque journaliste accrédité et l'envoie par notification.
+	•	Le journaliste ouvre son navigateur, HERALDO charge le client WebRTC et négocie la connexion avec MediaSoup.
+	•	MediaSoup reçoit le flux de l'animateur et le redistribue en mode SFU vers tous les spectateurs connectés.
+	•	Socket.io gère le canal de données parallèle (questions, chat, présence).
+
+Qualité et adaptive bitrate
+	•	Résolution de diffusion : 1080p par défaut, adaptation automatique selon la bande passante (720p, 480p, 360p).
+	•	Codec vidéo : VP8 (compatible tous navigateurs) avec fallback H.264.
+	•	Codec audio : Opus 48kHz — qualité broadcast.
+	•	Délai de latence cible : < 500ms pour le direct, 2-5 secondes pour le HLS fallback sur connexions lentes.
+
+6.2 Module VEILLE — Architecture de scraping
+HERALDO VEILLE utilise une architecture de micro-services pour surveiller les sources médiatiques en temps réel. Chaque source a son propre collector indépendant, permettant d'ajouter ou modifier des sources sans redéploiement global.
+
+Architecture des collectors
+	•	Collector RSS/Atom : scraping des flux RSS de 50+ médias ivoiriens toutes les 5 minutes.
+	•	Collector Social Media : API Twitter v2 + Facebook Graph API — polling toutes les 2 minutes.
+	•	Collector Web Scraper : Playwright headless pour les sites sans API ni RSS — toutes les 15 minutes.
+	•	Collector WhatsApp : intégration WhatsApp Business API pour les canaux publics officiels.
+
+Pipeline de traitement
+	•	Réception de la mention brute dans la queue Bull.
+	•	Déduplication : hash du contenu pour éviter les doublons cross-sources.
+	•	Analyse sémantique via API OpenAI (GPT-4o-mini) : détection des entités surveillées, tonalité, urgence.
+	•	Score de pertinence calculé (0-100) selon les mots-clés configurés par le tenant.
+	•	Si score > seuil → notification push temps réel via Socket.io + email si activé.
+	•	Stockage dans PostgreSQL + indexation Elasticsearch pour la recherche.
+
+
+7. Intégrations externes
+Service
+Usage
+Authentification
+Fallback
+WhatsApp Business API
+Module CITIZEN — messages
+Bearer token Meta
+SMS via Twilio
+Twilio
+SMS notifications
+API Key + Secret
+Email fallback
+OpenAI API
+Transcription + analyse VEILLE
+API Key
+Whisper local
+SendGrid
+Emails transactionnels
+API Key
+SMTP direct
+Cloudflare
+CDN + protection DDoS
+Zone API Token
+Nginx direct
+Sentry
+Monitoring erreurs
+DSN
+Logs locaux
+Stripe / CinetPay
+Paiements abonnements
+Secret Key
+Virement manuel
+
+8. Modèle de données — Entités principales
+Entités core
+	•	Institution : id, name, slug, plan, settings, created_at
+	•	User : id, institution_id, email, role, 2fa_enabled, last_login
+	•	Journalist : id, institution_id, full_name, email, phone, media_id, specialties[], status
+	•	Media : id, name, type (presse/radio/tv/online), audience_size, region
+	•	Communique : id, institution_id, title, content, status, scheduled_at, sent_at, author_id
+	•	Send : id, communique_id, journalist_id, sent_at, opened_at, read_duration
+
+Entités modules étendus
+	•	LiveSession : id, institution_id, title, status, started_at, ended_at, recording_url, transcript
+	•	VeilleKeyword : id, institution_id, keyword, weight, alert_threshold
+	•	Mention : id, institution_id, source, url, content, sentiment, score, detected_at
+	•	CitizenSubscriber : id, institution_id, phone, location, consent_date, active
+	•	Archive : id, institution_id, document_id, hash, certified_at, public
+	•	Accreditation : id, journalist_id, institution_id, type, valid_from, valid_until, qr_code
+
+Ce document est la référence technique de HERALDO V1 et V2. Toute décision d'architecture dérogeant à ces spécifications doit être documentée et validée par le CTO d'AUXX SAS avant implémentation.

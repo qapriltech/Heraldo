@@ -266,6 +266,16 @@ model Institution {
   impactReports ImpactReport[]
   payments      Payment[]
 
+  // M5-M9 Relations
+  veilleKeywords      VeilleKeyword[]
+  veilleMentions      VeilleMention[]
+  veilleAlerts        VeilleAlert[]
+  analyticsReports    AnalyticsReport[]
+  citizenSubscribers  CitizenSubscriber[]
+  citizenMessages     CitizenMessage[]
+  archiveDocuments    ArchiveDocument[]
+  accreditationCards  AccreditationCard[]
+
   @@map("institutions")
 }
 
@@ -1692,4 +1702,181 @@ model OdooSyncJob {
 
   @@index([status, createdAt])
   @@map("odoo_sync_jobs")
+}
+
+// ============================================================
+// M5 VEILLE — Media Monitoring
+// ============================================================
+
+model VeilleKeyword {
+  id              String   @id @default(uuid())
+  institutionId   String   @map("institution_id")
+  keyword         String
+  weight          Int      @default(1)
+  alertThreshold  Int      @default(50) @map("alert_threshold")
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  institution     Institution @relation(fields: [institutionId], references: [id])
+
+  @@map("veille_keywords")
+}
+
+model VeilleMention {
+  id                   String    @id @default(uuid())
+  institutionId        String    @map("institution_id")
+  source               String
+  sourceUrl            String?   @map("source_url")
+  content              String
+  sentiment            String    // positive|negative|neutral
+  score                Int       @default(0)
+  detectedAt           DateTime  @map("detected_at")
+  journalistId         String?   @map("journalist_id")
+  mediaOrganizationId  String?   @map("media_organization_id")
+  isAlert              Boolean   @default(false) @map("is_alert")
+  createdAt            DateTime  @default(now()) @map("created_at")
+
+  institution          Institution @relation(fields: [institutionId], references: [id])
+  alerts               VeilleAlert[]
+
+  @@index([institutionId, detectedAt])
+  @@map("veille_mentions")
+}
+
+model VeilleAlert {
+  id              String    @id @default(uuid())
+  institutionId   String    @map("institution_id")
+  mentionId       String    @map("mention_id")
+  severity        String    // info|warning|critical|crisis
+  acknowledged    Boolean   @default(false)
+  acknowledgedAt  DateTime? @map("acknowledged_at")
+  acknowledgedBy  String?   @map("acknowledged_by")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  institution     Institution    @relation(fields: [institutionId], references: [id])
+  mention         VeilleMention  @relation(fields: [mentionId], references: [id])
+
+  @@map("veille_alerts")
+}
+
+// ============================================================
+// M6 ANALYTICS — Impact Measurement
+// ============================================================
+
+model AnalyticsReport {
+  id              String   @id @default(uuid())
+  institutionId   String   @map("institution_id")
+  reportType      String   @map("report_type") // weekly|monthly|quarterly
+  periodStart     DateTime @map("period_start")
+  periodEnd       DateTime @map("period_end")
+  data            Json
+  pdfUrl          String?  @map("pdf_url")
+  generatedAt     DateTime @default(now()) @map("generated_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  institution     Institution @relation(fields: [institutionId], references: [id])
+
+  @@map("analytics_reports")
+}
+
+model AnalyticsCommuniqueStats {
+  id                        String   @id @default(uuid())
+  communiqueId              String   @unique @map("communique_id")
+  openRate                  Float    @default(0) @map("open_rate")
+  clickRate                 Float    @default(0) @map("click_rate")
+  articlesGenerated         Int      @default(0) @map("articles_generated")
+  estimatedReach            Int      @default(0) @map("estimated_reach")
+  avgPublicationDelayHours  Float?   @map("avg_publication_delay_hours")
+  updatedAt                 DateTime @updatedAt @map("updated_at")
+
+  @@map("analytics_communique_stats")
+}
+
+// ============================================================
+// M7 CITIZEN — Citizen Communication
+// ============================================================
+
+model CitizenSubscriber {
+  id              String   @id @default(uuid())
+  institutionId   String   @map("institution_id")
+  phone           String
+  location        String?
+  commune         String?
+  quartier        String?
+  consentDate     DateTime @map("consent_date")
+  active          Boolean  @default(true)
+  channel         String   // sms|whatsapp|both
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  institution     Institution @relation(fields: [institutionId], references: [id])
+
+  @@map("citizen_subscribers")
+}
+
+model CitizenMessage {
+  id              String   @id @default(uuid())
+  institutionId   String   @map("institution_id")
+  title           String
+  content         String
+  messageType     String   @map("message_type") // alert|info|official|event
+  channels        String[] // sms|whatsapp
+  targetCommunes  String[] @map("target_communes")
+  recipientCount  Int      @default(0) @map("recipient_count")
+  sentAt          DateTime? @map("sent_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  institution     Institution @relation(fields: [institutionId], references: [id])
+
+  @@map("citizen_messages")
+}
+
+// ============================================================
+// M8 ARCHIVE — Document Archive & Certification
+// ============================================================
+
+model ArchiveDocument {
+  id               String    @id @default(uuid())
+  institutionId    String    @map("institution_id")
+  title            String
+  documentType     String    @map("document_type") // communique|discours|arrete|circulaire|conference|rapport
+  sourceEntityType String?   @map("source_entity_type")
+  sourceEntityId   String?   @map("source_entity_id")
+  contentText      String?   @map("content_text")
+  sha256Hash       String?   @map("sha256_hash")
+  certifiedAt      DateTime? @map("certified_at")
+  isPublic         Boolean   @default(false) @map("is_public")
+  tags             String[]
+  fileUrl          String?   @map("file_url")
+  metadata         Json?
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  institution      Institution @relation(fields: [institutionId], references: [id])
+
+  @@index([institutionId, documentType, createdAt])
+  @@map("archive_documents")
+}
+
+// ============================================================
+// M9 ACCREDIT — Accreditation Management
+// ============================================================
+
+model AccreditationCard {
+  id                 String    @id @default(uuid())
+  journalistId       String    @map("journalist_id")
+  institutionId      String    @map("institution_id")
+  accreditationType  String    @map("accreditation_type") // permanent|annual|event
+  validFrom          DateTime  @map("valid_from")
+  validUntil         DateTime? @map("valid_until")
+  qrCode             String    @unique @map("qr_code")
+  status             String    @default("active")
+  eventName          String?   @map("event_name")
+  issuedBy           String    @map("issued_by")
+  issuedAt           DateTime  @default(now()) @map("issued_at")
+  revokedAt          DateTime? @map("revoked_at")
+  revokedReason      String?   @map("revoked_reason")
+
+  institution        Institution @relation(fields: [institutionId], references: [id])
+
+  @@index([journalistId, status])
+  @@map("accreditation_cards")
 }

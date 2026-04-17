@@ -14,6 +14,11 @@ import {
   Mail,
   Users,
   FileText,
+  Eye,
+  BarChart3,
+  Megaphone,
+  Archive,
+  CreditCard,
 } from "lucide-react";
 
 const navItems = [
@@ -27,6 +32,11 @@ const navItems = [
   { href: "/institution/inbox", label: "Inbox", icon: Mail },
   { href: "/institution/crm", label: "CRM", icon: Users },
   { href: "/institution/briefs", label: "Briefs", icon: FileText },
+  { href: "/institution/veille", label: "Veille", icon: Eye },
+  { href: "/institution/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/institution/citizen", label: "Citoyen", icon: Megaphone },
+  { href: "/institution/archive", label: "Archives", icon: Archive },
+  { href: "/institution/accredit", label: "Accredit", icon: CreditCard },
 ];
 
 function getUser() {
