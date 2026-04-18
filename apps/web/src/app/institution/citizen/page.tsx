@@ -5,7 +5,6 @@ import {
   Megaphone,
   Users,
   Upload,
-  Trash2,
   Send,
   MessageSquare,
   Phone,
@@ -15,10 +14,10 @@ import {
   Info,
   Calendar,
   CheckCircle,
+  Sparkles,
+  TrendingUp,
 } from "lucide-react";
 import { useState, useEffect } from "react";
-import Card from "@/components/ui/Card";
-import Badge from "@/components/ui/Badge";
 import { api } from "@/lib/api";
 
 interface Subscriber {
@@ -49,11 +48,11 @@ function getInstitutionId(): string {
   } catch { return ""; }
 }
 
-const messageTypeConfig: Record<string, { label: string; color: string; icon: typeof Info }> = {
-  alert: { label: "Alerte", color: "text-red-600", icon: AlertTriangle },
-  info: { label: "Information", color: "text-blue-600", icon: Info },
-  official: { label: "Officiel", color: "text-navy", icon: CheckCircle },
-  event: { label: "Evenement", color: "text-gold", icon: Calendar },
+const messageTypeConfig: Record<string, { label: string; color: string; bg: string; icon: typeof Info; border: string }> = {
+  alert: { label: "Alerte", color: "text-red", bg: "bg-red/10", icon: AlertTriangle, border: "border-l-red" },
+  info: { label: "Information", color: "text-teal", bg: "bg-teal/10", icon: Info, border: "border-l-teal" },
+  official: { label: "Officiel", color: "text-navy", bg: "bg-navy/10", icon: CheckCircle, border: "border-l-navy" },
+  event: { label: "Evenement", color: "text-gold", bg: "bg-gold/10", icon: Calendar, border: "border-l-gold" },
 };
 
 const communesList = ["Abobo", "Adjame", "Attiecoube", "Cocody", "Koumassi", "Marcory", "Plateau", "Port-Bouet", "Treichville", "Yopougon"];
@@ -65,7 +64,6 @@ export default function CitizenPage() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
 
-  // Composer state
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [messageType, setMessageType] = useState("info");
@@ -90,14 +88,7 @@ export default function CitizenPage() {
     if (!title.trim() || !content.trim()) return;
     setSending(true);
     try {
-      const msg = await api.post<any>("/citizen/messages", {
-        institutionId,
-        title,
-        content,
-        messageType,
-        channels,
-        targetCommunes,
-      });
+      const msg = await api.post<any>("/citizen/messages", { institutionId, title, content, messageType, channels, targetCommunes });
       setMessages((prev) => [msg, ...prev]);
       setTitle("");
       setContent("");
@@ -107,66 +98,77 @@ export default function CitizenPage() {
   };
 
   const handleImport = () => {
-    // Placeholder: in production this would open a file picker
     const phones = prompt("Entrez les numeros (separes par des virgules):");
     if (!phones) return;
     const list = phones.split(",").map((p) => ({ phone: p.trim() }));
-    api.post("/citizen/subscribers/import", { institutionId, subscribers: list })
-      .then(() => window.location.reload())
-      .catch(() => {});
+    api.post("/citizen/subscribers/import", { institutionId, subscribers: list }).then(() => window.location.reload()).catch(() => {});
   };
 
-  const toggleChannel = (ch: string) => {
-    setChannels((prev) => prev.includes(ch) ? prev.filter((c) => c !== ch) : [...prev, ch]);
-  };
+  const toggleChannel = (ch: string) => setChannels((prev) => prev.includes(ch) ? prev.filter((c) => c !== ch) : [...prev, ch]);
+  const toggleCommune = (c: string) => setTargetCommunes((prev) => prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]);
 
-  const toggleCommune = (c: string) => {
-    setTargetCommunes((prev) => prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]);
-  };
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[40vh]">
+        <div className="text-center">
+          <Loader2 className="w-10 h-10 text-gold animate-spin mx-auto mb-4" />
+          <p className="text-xs font-bold text-warm-gray uppercase tracking-widest">Chargement citoyen...</p>
+        </div>
+      </div>
+    );
+  }
 
-  if (loading) return <div className="flex items-center justify-center min-h-[40vh]"><Loader2 className="w-8 h-8 text-gold animate-spin" /></div>;
+  const smsCount = subscribers.filter((s) => s.channel === "sms" || s.channel === "both").length;
+  const whatsappCount = subscribers.filter((s) => s.channel === "whatsapp" || s.channel === "both").length;
 
   return (
     <>
+      {/* Header */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+        <div className="flex items-center gap-3 mb-2">
+          <Megaphone className="w-5 h-5 text-gold" />
+          <span className="text-[10px] font-extrabold text-gold uppercase tracking-[0.2em]">Communication directe</span>
+        </div>
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-extrabold text-navy tracking-tight flex items-center gap-2">
-              <Megaphone className="w-6 h-6 text-gold" /> Communication Citoyenne
-            </h1>
+            <h1 className="text-3xl font-serif text-navy tracking-tight">Communication Citoyenne</h1>
             <p className="text-warm-gray text-sm mt-1">Informez vos citoyens par SMS et WhatsApp.</p>
           </div>
           <div className="flex gap-2">
-            <button onClick={handleImport} className="flex items-center gap-2 px-4 py-2 rounded-xl border border-navy/10 text-sm font-bold text-navy hover:bg-navy/5 transition-all">
+            <button onClick={handleImport} className="bg-navy/5 text-navy font-bold text-sm px-5 py-3 rounded-2xl hover:bg-navy/10 transition-all flex items-center gap-2">
               <Upload className="w-4 h-4" /> Importer
             </button>
-            <button onClick={() => setShowComposer(!showComposer)} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-navy text-white text-sm font-bold shadow-md hover:bg-navy/90 transition-all">
+            <button onClick={() => setShowComposer(!showComposer)} className="gradient-gold text-navy-dark font-bold text-sm px-6 py-3 rounded-2xl shadow-xl hover:shadow-2xl transition-all flex items-center gap-2">
               <Send className="w-4 h-4" /> Nouveau message
             </button>
           </div>
         </div>
       </motion.div>
 
-      {/* KPIs */}
+      {/* KPIs with growth indicator */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {[
-          { label: "Abonnes", value: String(subscriberTotal), icon: Users, color: "text-navy" },
-          { label: "Messages envoyes", value: String(messages.length), icon: MessageSquare, color: "text-gold" },
-          { label: "Canal SMS", value: String(subscribers.filter((s) => s.channel === "sms" || s.channel === "both").length), icon: Phone, color: "text-green-600" },
-          { label: "Canal WhatsApp", value: String(subscribers.filter((s) => s.channel === "whatsapp" || s.channel === "both").length), icon: MessageSquare, color: "text-green-500" },
+          { label: "Abonnes", value: String(subscriberTotal), gradient: "from-navy to-purple", icon: Users, iconBg: "bg-navy/10", iconColor: "text-navy", growth: "+12%" },
+          { label: "Messages envoyes", value: String(messages.length), gradient: "from-gold to-orange", icon: MessageSquare, iconBg: "bg-gold/10", iconColor: "text-gold", growth: null },
+          { label: "Canal SMS", value: String(smsCount), gradient: "from-orange to-red", icon: Phone, iconBg: "bg-orange/10", iconColor: "text-orange", growth: null },
+          { label: "Canal WhatsApp", value: String(whatsappCount), gradient: "from-green to-teal", icon: MessageSquare, iconBg: "bg-green/10", iconColor: "text-green", growth: null },
         ].map((kpi, i) => (
-          <motion.div key={kpi.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}>
-            <Card hover={false} padding="sm">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-navy/5 flex items-center justify-center">
-                  <kpi.icon className={`w-5 h-5 ${kpi.color}`} />
+          <motion.div key={kpi.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
+            <div className="premium-card p-5 relative overflow-hidden">
+              <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${kpi.gradient}`} />
+              <div className="flex items-start justify-between mb-3">
+                <div className={`w-11 h-11 rounded-xl ${kpi.iconBg} flex items-center justify-center`}>
+                  <kpi.icon className={`w-5 h-5 ${kpi.iconColor}`} />
                 </div>
-                <div>
-                  <div className="text-2xl font-extrabold text-navy">{kpi.value}</div>
-                  <div className="text-[11px] text-warm-gray font-medium">{kpi.label}</div>
-                </div>
+                {kpi.growth && (
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-green/10 text-[10px] font-extrabold text-green">
+                    <TrendingUp className="w-3 h-3" /> {kpi.growth}
+                  </div>
+                )}
               </div>
-            </Card>
+              <div className="text-3xl font-extrabold text-navy mb-0.5">{kpi.value}</div>
+              <div className="text-xs font-semibold text-warm-gray">{kpi.label}</div>
+            </div>
           </motion.div>
         ))}
       </div>
@@ -174,91 +176,119 @@ export default function CitizenPage() {
       {/* Composer */}
       {showComposer && (
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-          <Card hover={false}>
-            <h3 className="text-sm font-bold text-navy mb-4">Composer un message</h3>
+          <div className="premium-card p-6 relative overflow-hidden">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-gold to-orange" />
+            <h3 className="text-sm font-extrabold text-navy mb-5 flex items-center gap-2">
+              <Send className="w-4 h-4 text-gold" /> Composer un message
+            </h3>
             <div className="space-y-4">
-              <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Titre du message" className="w-full px-4 py-3 rounded-xl border border-navy/10 text-sm" />
-              <textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder="Contenu du message..." rows={4} className="w-full px-4 py-3 rounded-xl border border-navy/10 text-sm resize-none" />
+              <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Titre du message" className="w-full px-4 py-3 rounded-2xl border border-navy/10 bg-ivory/50 text-sm" />
+              <textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder="Contenu du message..." rows={4} className="w-full px-4 py-3 rounded-2xl border border-navy/10 bg-ivory/50 text-sm resize-none" />
 
               {/* Type */}
               <div>
-                <label className="text-xs font-bold text-navy mb-2 block">Type de message</label>
+                <label className="text-[10px] font-extrabold text-gold uppercase tracking-[0.15em] mb-2 block">Type de message</label>
                 <div className="flex gap-2">
                   {Object.entries(messageTypeConfig).map(([key, cfg]) => (
-                    <button key={key} onClick={() => setMessageType(key)} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${messageType === key ? "bg-navy text-white" : "bg-white text-warm-gray border border-navy/10"}`}>
+                    <button key={key} onClick={() => setMessageType(key)} className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all ${messageType === key ? "gradient-gold text-navy-dark shadow-lg" : "bg-white text-warm-gray border border-navy/10"}`}>
                       {cfg.label}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Channels */}
+              {/* Channel toggle pills */}
               <div>
-                <label className="text-xs font-bold text-navy mb-2 block">Canaux</label>
+                <label className="text-[10px] font-extrabold text-gold uppercase tracking-[0.15em] mb-2 block">Canaux</label>
                 <div className="flex gap-2">
-                  {["sms", "whatsapp"].map((ch) => (
-                    <button key={ch} onClick={() => toggleChannel(ch)} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${channels.includes(ch) ? "bg-green-600 text-white" : "bg-white text-warm-gray border border-navy/10"}`}>
-                      {ch === "sms" ? "SMS" : "WhatsApp"}
-                    </button>
-                  ))}
+                  <button onClick={() => toggleChannel("sms")} className={`px-5 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 ${channels.includes("sms") ? "bg-orange text-white shadow-lg" : "bg-white text-warm-gray border border-navy/10"}`}>
+                    <Phone className="w-3.5 h-3.5" /> SMS
+                  </button>
+                  <button onClick={() => toggleChannel("whatsapp")} className={`px-5 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 ${channels.includes("whatsapp") ? "bg-green text-white shadow-lg" : "bg-white text-warm-gray border border-navy/10"}`}>
+                    <MessageSquare className="w-3.5 h-3.5" /> WhatsApp
+                  </button>
                 </div>
               </div>
 
               {/* Target communes */}
               <div>
-                <label className="text-xs font-bold text-navy mb-2 block">Communes ciblees (vide = toutes)</label>
+                <label className="text-[10px] font-extrabold text-gold uppercase tracking-[0.15em] mb-2 block">Communes ciblees (vide = toutes)</label>
                 <div className="flex flex-wrap gap-2">
                   {communesList.map((c) => (
-                    <button key={c} onClick={() => toggleCommune(c)} className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${targetCommunes.includes(c) ? "bg-gold text-navy-dark" : "bg-navy/5 text-warm-gray"}`}>
-                      <MapPin className="w-3 h-3 inline mr-0.5" />{c}
+                    <button key={c} onClick={() => toggleCommune(c)} className={`px-3 py-1.5 rounded-2xl text-[10px] font-bold transition-all flex items-center gap-1 ${targetCommunes.includes(c) ? "gradient-gold text-navy-dark shadow-md" : "bg-navy/5 text-warm-gray hover:text-navy"}`}>
+                      <MapPin className="w-3 h-3" />{c}
                     </button>
                   ))}
                 </div>
               </div>
 
-              <button onClick={handleSend} disabled={sending || !title.trim() || !content.trim()} className="w-full py-3 rounded-xl bg-navy text-white font-bold text-sm shadow-md hover:bg-navy/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+              <button onClick={handleSend} disabled={sending || !title.trim() || !content.trim()} className="w-full py-3.5 rounded-2xl gradient-gold text-navy-dark font-extrabold text-sm shadow-xl hover:shadow-2xl transition-all disabled:opacity-50 flex items-center justify-center gap-2">
                 {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                 Envoyer le message
               </button>
             </div>
-          </Card>
+          </div>
         </motion.div>
       )}
 
+      {/* Section header */}
+      <div className="flex items-center gap-2 mb-4">
+        <MessageSquare className="w-4 h-4 text-gold" />
+        <h2 className="text-[11px] font-extrabold text-gold uppercase tracking-[0.2em]">Messages envoyes</h2>
+      </div>
+
       {/* Sent messages */}
-      <h2 className="text-lg font-bold text-navy mb-4">Messages envoyes</h2>
       <div className="space-y-3">
         {messages.length === 0 && (
-          <Card hover={false}><p className="text-sm text-warm-gray text-center py-4">Aucun message envoye.</p></Card>
+          <div className="premium-card p-12 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-gold/10 flex items-center justify-center mx-auto mb-4">
+              <Sparkles className="w-8 h-8 text-gold" />
+            </div>
+            <h3 className="text-lg font-serif text-navy mb-2">Aucun message envoye</h3>
+            <p className="text-sm text-warm-gray mb-6">Envoyez votre premier message pour informer vos citoyens.</p>
+            <button onClick={() => setShowComposer(true)} className="gradient-gold text-navy-dark font-bold text-sm px-6 py-3 rounded-2xl shadow-xl inline-flex items-center gap-2">
+              <Send className="w-4 h-4" /> Composer
+            </button>
+          </div>
         )}
         {messages.map((m, i) => {
           const tc = messageTypeConfig[m.messageType] || messageTypeConfig.info;
           const Icon = tc.icon;
           return (
-            <motion.div key={m.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
-              <Card padding="sm" className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                <div className="w-10 h-10 rounded-xl bg-navy/5 flex items-center justify-center shrink-0">
+            <motion.div key={m.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 + i * 0.05 }}>
+              <div className={`premium-card p-5 border-l-4 ${tc.border} flex flex-col sm:flex-row items-start sm:items-center gap-4`}>
+                <div className={`w-11 h-11 rounded-xl ${tc.bg} flex items-center justify-center shrink-0`}>
                   <Icon className={`w-5 h-5 ${tc.color}`} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <p className="font-bold text-navy truncate">{m.title}</p>
-                    <Badge variant="neutral">{tc.label}</Badge>
+                    <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${tc.bg} ${tc.color}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${tc.color === "text-red" ? "bg-red" : tc.color === "text-teal" ? "bg-teal" : tc.color === "text-navy" ? "bg-navy" : "bg-gold"}`} />
+                      {tc.label}
+                    </span>
                   </div>
-                  <p className="text-xs text-warm-gray truncate">{m.content}</p>
+                  <p className="text-xs text-warm-gray truncate mt-0.5">{m.content}</p>
                 </div>
-                <div className="flex gap-4 text-center shrink-0">
+                {/* Delivery stats */}
+                <div className="flex gap-5 text-center shrink-0">
                   <div>
-                    <p className="text-lg font-extrabold text-navy">{m.recipientCount}</p>
-                    <p className="text-[9px] text-warm-gray uppercase tracking-wider">Destinataires</p>
+                    <p className="text-xl font-extrabold text-navy">{m.recipientCount}</p>
+                    <p className="text-[9px] text-warm-gray uppercase tracking-wider font-semibold">Destinataires</p>
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-warm-gray">{m.channels.join(", ")}</p>
-                    <p className="text-[9px] text-warm-gray uppercase tracking-wider">Canaux</p>
+                    <div className="flex gap-1 justify-center mb-0.5">
+                      {m.channels.map(ch => (
+                        <span key={ch} className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${ch === "sms" ? "bg-orange/10 text-orange" : "bg-green/10 text-green"}`}>
+                          {ch.toUpperCase()}
+                        </span>
+                      ))}
+                    </div>
+                    <p className="text-[9px] text-warm-gray uppercase tracking-wider font-semibold">Canaux</p>
                   </div>
                 </div>
                 <span className="text-[10px] text-warm-gray shrink-0">{m.sentAt ? new Date(m.sentAt).toLocaleDateString("fr-FR") : "-"}</span>
-              </Card>
+              </div>
             </motion.div>
           );
         })}
