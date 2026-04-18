@@ -79,4 +79,9 @@ export class AgoraController {
   getRoomParticipants(@Param('id') id: string) {
     return this.service.getRoomParticipants(id);
   }
+
+  @Get('rooms/:id/live-url')
+  getLiveUrl(@Param('id') id: string) {
+    return this.service.getLiveUrl(id);
+  }
 }

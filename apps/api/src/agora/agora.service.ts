@@ -59,6 +59,10 @@ export class AgoraService {
     const replayExpiresAt = new Date(scheduledDate);
     replayExpiresAt.setDate(replayExpiresAt.getDate() + config.replayDays);
 
+    // Générer le slug Jitsi unique pour la visio
+    const jitsiRoomSlug = `heraldo-${crypto.randomBytes(8).toString('hex')}`;
+    const jitsiUrl = `https://meet.jit.si/${jitsiRoomSlug}`;
+
     const room = await this.prisma.agoraRoom.create({
       data: {
         institutionId,
@@ -71,6 +75,8 @@ export class AgoraService {
         brandingColor: data.brandingColor || null,
         invitationToken,
         replayExpiresAt,
+        recordingUrl: jitsiUrl, // Stocke l'URL Jitsi dans recordingUrl temporairement
+        pressKitUrl: jitsiRoomSlug, // Stocke le slug Jitsi
       },
     });
 
@@ -365,5 +371,33 @@ export class AgoraService {
       },
       orderBy: { invitedAt: 'asc' },
     });
+  }
+
+  /**
+   * Obtenir l'URL de visio Jitsi pour une salle
+   */
+  async getLiveUrl(roomId: string) {
+    const room = await this.prisma.agoraRoom.findUnique({
+      where: { id: roomId },
+      select: { id: true, title: true, status: true, recordingUrl: true, pressKitUrl: true, brandingColor: true, institution: { select: { name: true } } },
+    });
+    if (!room) throw new NotFoundException('Salle introuvable');
+
+    const jitsiSlug = room.pressKitUrl || `heraldo-${roomId.substring(0, 16)}`;
+    const jitsiUrl = `https://meet.jit.si/${jitsiSlug}`;
+
+    return {
+      roomId: room.id,
+      title: room.title,
+      status: room.status,
+      provider: 'jitsi',
+      liveUrl: jitsiUrl,
+      jitsiConfig: {
+        roomName: jitsiSlug,
+        subject: room.title,
+        displayName: room.institution?.name || 'HERALDO',
+        brandingColor: room.brandingColor || '#0D1B3E',
+      },
+    };
   }
 }

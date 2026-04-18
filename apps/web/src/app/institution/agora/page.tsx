@@ -127,7 +127,14 @@ export default function AgoraPage() {
                   <div className="flex items-center gap-3 shrink-0">
                     <Badge variant={cfg.variant} dot>{cfg.label}</Badge>
                     {room.status === "upcoming" && (
-                      <Button variant="outline" size="sm">Gerer</Button>
+                      <Link href={`/institution/agora/${room.id}/live`}>
+                        <Button variant="outline" size="sm">Gerer</Button>
+                      </Link>
+                    )}
+                    {room.status === "live" && (
+                      <Link href={`/institution/agora/${room.id}/live`}>
+                        <Button size="sm"><Video className="w-4 h-4" /> Rejoindre</Button>
+                      </Link>
                     )}
                     <button className="p-2 rounded-lg hover:bg-ivory-dark transition-colors cursor-pointer">
                       <MoreHorizontal className="w-4 h-4 text-warm-gray" />
