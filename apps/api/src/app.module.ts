@@ -38,6 +38,7 @@ import { CitizenModule } from './citizen/citizen.module';
 import { ArchiveModule } from './archive/archive.module';
 import { AccreditModule } from './accredit/accredit.module';
 import { RssModule } from './rss/rss.module';
+import { AgencyModule } from './agency/agency.module';
 
 @Module({
   imports: [
@@ -78,6 +79,7 @@ import { RssModule } from './rss/rss.module';
     ArchiveModule,
     AccreditModule,
     RssModule,
+    AgencyModule,
   ],
   providers: [
     {

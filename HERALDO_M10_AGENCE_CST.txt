@@ -1,0 +1,322 @@
+HERALDO AGENCE
+Module M10 — Spécifications Techniques
+Architecture · API · Base de données · Sécurité · Mobile · Social
+Référence
+HP-CST-M10-2026
+Version
+1.0
+Dépend de
+HP-CST-V1-2026 (Spécifications Techniques générales)
+Destinataire
+Équipe technique AUXX — Développeurs, DevOps, Mobile
+Date
+Avril 2026
+
+
+
+
+
+1. Architecture technique
+1.1 Extension du modèle multi-tenant
+HERALDO AGENCE ajoute une couche d'abstraction supplémentaire au-dessus du modèle multi-tenant existant. Chaque compte AGENCE est un tenant HERALDO standard, mais il contient lui-même plusieurs sous-espaces (clients) qui sont des tenants logiques imbriqués.
+
+Principe : Tenant AGENCE → N sous-tenants CLIENT. Chaque client d'une agence est un sous-tenant avec son propre schéma de données, ses propres clés d'intégration (OAuth réseaux sociaux), et ses propres paramètres de marque blanche. L'isolation est garantie au niveau base de données par le préfixe agency_{agency_id}_client_{client_id}_ sur tous les schémas clients.
+
+1.2 Nouveaux rôles RBAC
+Rôle
+Accès
+Restrictions
+AGENCY_ADMIN
+Gestion complète de l'agence + tous clients
+Ne peut pas accéder aux données d'une autre agence
+AGENCY_MANAGER
+Gestion des clients assignés + rapports
+Ne voit pas les clients non assignés
+AGENCY_OPERATOR
+Envoi communiqués + gestion annuaire client assigné
+Pas accès facturation ni création client
+CLIENT_REVIEWER
+Validation contenu avant publication (côté client)
+Interface simplifiée en marque blanche — pas accès agence
+
+
+2. Modèle de données — Nouvelles entités
+2.1 Entités principales M10
+Agency
+	•	id UUID, name STRING, slug STRING UNIQUE, plan ENUM(SOLO|PRO|AGENCY|ENTERPRISE)
+	•	white_label_name STRING NULLABLE — nom affiché dans les envois si marque blanche activée
+	•	white_label_email STRING NULLABLE — email expéditeur personnalisé
+	•	white_label_logo_url STRING NULLABLE
+	•	max_clients INTEGER — selon le plan souscrit
+	•	created_at TIMESTAMP, updated_at TIMESTAMP
+
+AgencyClient (sous-tenant)
+	•	id UUID, agency_id FK → Agency
+	•	name STRING — nom du client
+	•	logo_url STRING, primary_color STRING, secondary_color STRING
+	•	sector ENUM(politique|corporate|culture|sport|ong|autre)
+	•	brief TEXT — brief de communication saisi par l'attaché
+	•	editorial_tone ENUM(formel|neutre|décontracté|militant)
+	•	contact_name STRING, contact_email STRING — interlocuteur côté client
+	•	reviewer_token STRING UNIQUE — token d'accès interface validation client
+	•	monthly_budget INTEGER NULLABLE — budget com mensuel en FCFA
+	•	hourly_rate INTEGER NULLABLE — taux horaire facturation
+	•	active BOOLEAN DEFAULT true
+
+SocialAccount (intégrations réseaux sociaux)
+	•	id UUID, client_id FK → AgencyClient
+	•	platform ENUM(facebook|twitter|instagram|linkedin|whatsapp)
+	•	account_id STRING — ID du compte sur la plateforme
+	•	account_name STRING — nom affiché du compte
+	•	access_token TEXT ENCRYPTED — token OAuth chiffré AES-256
+	•	refresh_token TEXT ENCRYPTED NULLABLE
+	•	token_expires_at TIMESTAMP NULLABLE
+	•	scopes TEXT[] — permissions accordées par le compte
+	•	active BOOLEAN
+
+SocialPost (publication réseaux sociaux)
+	•	id UUID, client_id FK → AgencyClient, communique_id FK NULLABLE
+	•	platform ENUM — réseau cible
+	•	content TEXT — contenu adapté au réseau
+	•	media_urls TEXT[] — URLs des médias attachés
+	•	status ENUM(draft|pending_approval|scheduled|published|failed)
+	•	scheduled_at TIMESTAMP NULLABLE, published_at TIMESTAMP NULLABLE
+	•	platform_post_id STRING NULLABLE — ID du post publié sur la plateforme
+	•	engagement_likes INTEGER DEFAULT 0, engagement_shares INTEGER DEFAULT 0, engagement_comments INTEGER DEFAULT 0
+
+TimeEntry (suivi du temps)
+	•	id UUID, agency_id FK, client_id FK, user_id FK
+	•	description TEXT, started_at TIMESTAMP, ended_at TIMESTAMP NULLABLE
+	•	duration_minutes INTEGER NULLABLE — calculé à la fermeture
+	•	billable BOOLEAN DEFAULT true, hourly_rate INTEGER
+
+ClientReport (rapport mensuel)
+	•	id UUID, client_id FK → AgencyClient
+	•	period_start DATE, period_end DATE
+	•	communiques_sent INTEGER, avg_open_rate DECIMAL
+	•	estimated_reach BIGINT, mentions_count INTEGER
+	•	social_engagement_total INTEGER
+	•	pdf_url STRING NULLABLE — URL du rapport PDF généré
+	•	sent_to_client BOOLEAN DEFAULT false, sent_at TIMESTAMP NULLABLE
+
+
+3. Endpoints API — Module M10
+3.1 Gestion des clients agence
+	•	GET /api/v1/agency/clients — Liste des clients avec stats résumées
+	•	POST /api/v1/agency/clients — Créer un nouveau client
+	•	GET /api/v1/agency/clients/{clientId} — Détail client + analytics
+	•	PATCH /api/v1/agency/clients/{clientId} — Mettre à jour le profil client
+	•	DELETE /api/v1/agency/clients/{clientId} — Archiver un client
+	•	POST /api/v1/agency/clients/{clientId}/switch — Basculer vers ce client (met à jour le contexte de session)
+
+3.2 Marque blanche
+	•	GET /api/v1/agency/clients/{clientId}/whitelabel — Configuration marque blanche
+	•	PUT /api/v1/agency/clients/{clientId}/whitelabel — Mettre à jour (nom, email, logo)
+	•	POST /api/v1/agency/clients/{clientId}/whitelabel/verify-dns — Vérifier la configuration DNS pour l'email personnalisé
+
+3.3 Réseaux sociaux
+	•	GET /api/v1/agency/clients/{clientId}/social-accounts — Comptes connectés
+	•	POST /api/v1/agency/clients/{clientId}/social-accounts/connect — Initier OAuth pour un réseau
+	•	DELETE /api/v1/agency/clients/{clientId}/social-accounts/{accountId} — Déconnecter
+	•	POST /api/v1/agency/clients/{clientId}/social-posts — Créer et planifier une publication
+	•	GET /api/v1/agency/clients/{clientId}/social-posts — Historique des publications
+	•	POST /api/v1/agency/clients/{clientId}/social-posts/{postId}/publish — Publication immédiate
+	•	GET /api/v1/agency/clients/{clientId}/social-posts/{postId}/stats — Engagement stats
+
+3.4 Rapports clients
+	•	GET /api/v1/agency/clients/{clientId}/reports — Historique des rapports
+	•	POST /api/v1/agency/clients/{clientId}/reports/generate — Générer un rapport pour une période
+	•	GET /api/v1/agency/clients/{clientId}/reports/{reportId}/pdf — Télécharger le PDF
+	•	POST /api/v1/agency/clients/{clientId}/reports/{reportId}/send — Envoyer au client
+
+3.5 Suivi du temps et facturation
+	•	GET /api/v1/agency/clients/{clientId}/time-entries — Entrées de temps
+	•	POST /api/v1/agency/clients/{clientId}/time-entries — Ajouter une entrée
+	•	POST /api/v1/agency/clients/{clientId}/time-entries/start — Démarrer un chronomètre
+	•	POST /api/v1/agency/clients/{clientId}/time-entries/{id}/stop — Arrêter le chronomètre
+	•	POST /api/v1/agency/clients/{clientId}/invoices/generate — Générer une facture mensuelle
+
+3.6 Webhook validation client
+	•	GET /api/v1/agency/clients/{clientId}/review/{token} — Interface de validation (accès sans compte)
+	•	POST /api/v1/agency/clients/{clientId}/review/{token}/approve — Approuver un contenu
+	•	POST /api/v1/agency/clients/{clientId}/review/{token}/reject — Rejeter avec commentaire
+
+
+4. Intégrations OAuth réseaux sociaux
+4.1 Architecture OAuth sécurisée
+Les tokens OAuth sont la donnée la plus sensible du module AGENCE. Une compromission donnerait accès aux comptes officiels des clients sur tous les réseaux sociaux. L'architecture de stockage est donc renforcée au-delà du standard.
+
+Chiffrement des tokens
+	•	Chaque token est chiffré avec AES-256-GCM avant stockage en base.
+	•	La clé de chiffrement est dérivée de la clé maître de l'agency_id + client_id — spécifique à chaque client.
+	•	La clé maître n'est jamais stockée en base — elle est reconstituée à runtime depuis un secret vault.
+	•	Même en cas de dump de la base de données, les tokens sont illisibles sans accès au vault.
+
+Gestion de l'expiration
+	•	Vérification du token_expires_at avant chaque appel API réseau social.
+	•	Rafraîchissement automatique du token si expiration < 1 heure (Bull job background).
+	•	Si le rafraîchissement échoue : notification immédiate à l'AGENCY_ADMIN et désactivation du compte social en attente de reconnexion.
+	•	Rotation de token logguée dans l'audit log avec timestamp.
+
+4.2 Spécifications par réseau
+Réseau
+API utilisée
+Scopes requis
+Limitations
+Facebook
+Graph API v18+
+pages_manage_posts, pages_read_engagement
+Rate limit : 200 posts/heure/page
+X (Twitter)
+API v2 — OAuth 2.0
+tweet.write, tweet.read, offline.access
+Rate limit : 300 posts/15min
+LinkedIn
+LinkedIn API v2
+w_member_social, r_organization_social
+Rate limit : 150 posts/jour
+Instagram
+Graph API (via Facebook)
+instagram_content_publish
+Image obligatoire — texte seul non supporté
+WhatsApp
+Cloud API (Meta)
+Numéro Business vérifié
+Template obligatoire pour premier message
+
+
+5. Application mobile — Spécifications React Native
+5.1 Stack technique
+Technologie
+Version
+Usage
+React Native
+0.73+
+Framework cross-platform iOS/Android
+Expo
+SDK 50+
+Build, OTA updates, natif plugins
+React Navigation
+6.x
+Navigation — Stack + Tab + Drawer
+React Query
+5.x
+Cache API + synchronisation offline
+MMKV
+2.x
+Stockage local chiffré rapide (tokens, cache)
+Reanimated
+3.x
+Animations fluides 60fps
+Expo Notifications
+SDK 50
+Push notifications FCM + APNs
+Expo Camera
+SDK 50
+Scan QR code accréditation
+Expo Audio
+SDK 50
+Enregistrement vocal → transcription
+NativeWind
+4.x
+Tailwind CSS pour React Native
+
+5.2 Gestion offline
+Un attaché de presse sur le terrain n'a pas toujours du réseau. L'application doit rester utilisable en mode dégradé.
+
+Données synchronisées en cache local
+	•	Annuaire journalistes de tous les clients — mis à jour à chaque lancement en ligne.
+	•	Agenda des 14 prochains jours — synchronisé toutes les heures.
+	•	Derniers communiqués (30 jours) — consultables hors ligne.
+	•	Profils clients avec logos et couleurs — stockés localement.
+
+Actions disponibles hors ligne
+	•	Composition d'un communiqué (mis en file d'attente pour envoi au retour du réseau).
+	•	Consultation et modification des contacts journalistes.
+	•	Prise de notes vocales (transcrites au retour du réseau).
+	•	Consultation de l'agenda et ajout d'événements (synchronisés au retour).
+
+Conflits de synchronisation
+	•	Stratégie last-write-wins pour les modifications de contacts.
+	•	Notification à l'utilisateur si conflit détecté lors de la synchronisation.
+
+5.3 Sécurité mobile
+	•	Authentification biométrique (Face ID / Touch ID) — fallback PIN 6 chiffres.
+	•	Token JWT stocké dans MMKV chiffré — jamais dans AsyncStorage non chiffré.
+	•	Session expirée après 30 minutes d'inactivité — réauthentification requise.
+	•	Certificate pinning sur toutes les requêtes API — protection contre MITM.
+	•	Détection de jailbreak/root — désactivation de l'app sur appareils compromis.
+	•	Screenshot protection sur les écrans sensibles (INBOX, CRM, détail client).
+
+
+6. Génération des rapports PDF
+6.1 Architecture de génération
+La génération des rapports PDF est un processus asynchrone déclenché en arrière-plan par un Bull job. Le PDF est généré côté serveur (Node.js), stocké dans MinIO, et l'URL signée est renvoyée au client.
+
+Stack de génération
+	•	Puppeteer headless : rendu HTML → PDF haute qualité avec gestion des images, couleurs et typographies des clients.
+	•	Template HTML Handlebars : template paramétré avec les données du rapport (KPIs, graphiques Chart.js, logo client).
+	•	Chart.js rendu côté serveur : graphiques vectoriels intégrés au PDF (pas d'images bitmap).
+	•	Watermark conditionnel : si formule SOLO, mention discrète "Powered by HERALDO" — supprimée en PRO et AGENCE.
+
+Données incluses dans le rapport
+	•	Page de garde : logo client, période, nom de l'agence ou de l'attaché.
+	•	Synthèse exécutive : 4 KPIs clés avec icônes et comparaison mois précédent.
+	•	Communiqués : liste avec objet, date, nombre de destinataires, taux de lecture, portée estimée.
+	•	Top journalistes : classement des 5 journalistes les plus actifs avec photo et média.
+	•	Réseaux sociaux : publications du mois, engagement total par réseau, graphique d'évolution.
+	•	Mentions VEILLE : synthèse des mentions si module activé.
+	•	Recommandations : 3 actions générées automatiquement par analyse des KPIs.
+	•	Annexe : journal complet de toutes les actions du mois.
+
+
+7. Budget de développement M10
+Composant
+Priorité
+Budget min
+Budget max
+A1 MULTI-CLIENT — architecture sous-tenant
+P0
+3 000 000
+4 500 000
+A2 MARQUE BLANCHE — config + DNS + templates
+P0
+2 000 000
+3 000 000
+A3 RAPPORT CLIENT — génération PDF Puppeteer
+P0
+2 500 000
+3 500 000
+A4 SOCIAL — intégrations OAuth x5 réseaux
+P1
+5 000 000
+8 000 000
+A5 AGENDA — calendrier éditorial partagé
+P0
+1 500 000
+2 000 000
+A6 STUDIO — templates + génération visuels
+P1
+3 500 000
+5 000 000
+A7 INBOX — messagerie centralisée multi-clients
+P0
+2 000 000
+3 000 000
+A8 CRM — enrichissement fiche journaliste
+P0
+1 500 000
+2 000 000
+A9 MOBILE — app React Native iOS + Android
+P0
+8 000 000
+12 000 000
+Tests + QA + documentation
+—
+2 000 000
+3 000 000
+TOTAL MODULE M10
+31 000 000
+46 000 000
+
+Budget total HERALDO écosystème complet (M1 à M10) : 81 à 119 millions FCFA. Un seul contrat HERALDO AGENCE PRO à 280 000 FCFA/mois avec 50 agences clientes = 14 millions FCFA/an de revenu récurrent. ROI M10 atteint en moins de 3 ans.

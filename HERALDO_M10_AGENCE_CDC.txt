@@ -1,0 +1,284 @@
+HERALDO AGENCE
+Module M10 — Cahier des Charges Fonctionnel
+Le cockpit des agences RP et attachés de presse indépendants
+Référence
+HP-CDC-M10-2026
+Version
+1.0 — Intégration écosystème HERALDO V2
+Éditeur
+AUXX SAS — Abidjan, Côte d'Ivoire
+Module
+M10 — HERALDO AGENCE
+Dépend de
+M1 PRESS (obligatoire) — M6 ANALYTICS (recommandé)
+Sous-modules
+MULTI-CLIENT · MARQUE BLANCHE · SOCIAL · AGENDA · STUDIO · INBOX · CRM · BRIEF · MOBILE
+Date
+Avril 2026
+
+
+
+
+
+1. Vision et positionnement
+1.1 La différence fondamentale
+HERALDO PRESSE s'adresse à une institution qui gère sa propre communication. HERALDO AGENCE s'adresse à un professionnel qui gère la communication de plusieurs clients simultanément. Ce n'est pas le même métier, pas le même rythme, pas les mêmes besoins. HERALDO AGENCE est un cockpit de pilotage multi-clients, pas simplement HERALDO avec plus de fonctionnalités.
+
+1.2 Qui est l'utilisateur cible
+L'attaché de presse indépendant : professionnel freelance qui gère entre 3 et 15 clients simultanément — personnalités, entreprises privées, ONG, artistes, sportifs, figures politiques. Il est rarement derrière un bureau. Il travaille depuis son téléphone, en déplacement, sur le terrain.
+L'agence RP : structure de 2 à 20 personnes avec des comptes clients distincts, des équipes dédiées par compte, des reportings mensuels à produire, des résultats à prouver.
+
+1.3 Ce que HERALDO AGENCE résout
+Problème actuel
+Solution HERALDO AGENCE
+Jongler entre des boîtes mail distinctes par client
+Un seul compte HERALDO — tous les clients visibles depuis un tableau de bord unique
+Envoyer des communiqués depuis Gmail avec son nom personnel
+Marque blanche — les envois partent au nom du client, pas de l'agence
+Produire des rapports manuellement chaque mois
+Rapport client automatique PDF mensuel généré en un clic
+Maintenir des listes journalistes par client sur Excel
+Annuaire segmenté par client, par secteur, historique des interactions
+Créer des visuels pour chaque client avec un designer
+Module STUDIO — templates brandés par client générés automatiquement
+Planifier les prises de parole dans un agenda personnel
+Calendrier éditorial partagé par client avec workflow de validation
+Publier sur les réseaux sociaux des clients séparément
+Un envoi depuis HERALDO déclenche les publications sur tous les réseaux du client
+
+
+2. Architecture — 9 sous-modules
+HERALDO AGENCE est un mode d'utilisation de HERALDO, activé sur le compte d'un utilisateur ayant le rôle AGENCE. Il déverrouille 9 sous-modules spécifiques en complément des modules PRESS et ANALYTICS existants.
+
+#
+Sous-module
+Rôle principal
+Priorité
+Dépendance
+A1
+MULTI-CLIENT
+Gestion de plusieurs clients depuis un seul compte
+P0
+M1 PRESS
+A2
+MARQUE BLANCHE
+Envois et rapports au nom du client, pas de l'agence
+P0
+A1
+A3
+RAPPORT CLIENT
+Rapport mensuel PDF automatique par client
+P0
+M6 ANALYTICS
+A4
+SOCIAL
+Publication multi-réseaux sociaux par client
+P0
+A1
+A5
+AGENDA
+Calendrier éditorial partagé par client
+P0
+A1
+A6
+STUDIO
+Génération de visuels brandés par client
+P0
+A1
+A7
+INBOX
+Boîte de réception unifiée multi-clients
+P0
+A1
+A8
+CRM
+Gestion enrichie journalistes par client
+P0
+A1
+A9
+MOBILE
+Application mobile dédiée attaché de presse
+P0
+Tous
+
+
+3. Spécifications fonctionnelles détaillées
+A1 — MULTI-CLIENT
+Cœur du module. Tout le reste en dépend.
+
+Gestion des clients
+	•	Création d'un profil client complet : nom, logo, secteur, contacts internes, brief de communication, ton éditorial.
+	•	Bascule entre clients en un clic depuis le tableau de bord principal — aucune déconnexion/reconnexion.
+	•	Isolation totale des données : les journalistes, communiqués, analytics et contacts d'un client sont invisibles depuis le compte d'un autre.
+	•	Tableau de bord global agence : vue synthétique de l'activité de tous les clients — communiqués envoyés, alertes, prochaines échéances.
+Facturation et reporting
+	•	Suivi du temps passé par client : saisie manuelle ou chronométrage automatique des actions.
+	•	Budget communication par client : suivi des dépenses (achat d'espaces, déplacements, productions) avec alerte de dépassement.
+	•	Génération de facture mensuelle par client : heures × taux horaire + frais. Export PDF ou envoi direct par email.
+
+A2 — MARQUE BLANCHE
+L'identité de l'agence disparaît. Le client est en premier plan.
+
+	•	Nom d'expéditeur personnalisé : les communiqués partent depuis "Direction de la Communication — [Nom du Client]" et non depuis le compte HERALDO de l'agence.
+	•	Adresse email d'expédition dédiée par client : presse@nomduclient.ci — configurée via DNS du client ou alias HERALDO.
+	•	Interface personnalisée par client : si le client accède à HERALDO pour valider les contenus avant envoi, il voit une interface aux couleurs de sa propre marque.
+	•	Rapports sans mention HERALDO : les PDF de rapport mensuel portent le logo de l'agence ou du client selon la configuration choisie.
+	•	Signature email personnalisée : template de signature HTML configurable par client avec ses coordonnées officielles.
+
+A3 — RAPPORT CLIENT
+La preuve de valeur mensuelle. Ce module justifie le budget de l'attaché de presse.
+
+	•	Rapport automatique généré le 1er de chaque mois — ou à la demande à tout moment.
+	•	Contenu du rapport : nombre de communiqués envoyés, taux de lecture moyen, portée estimée, top 5 journalistes les plus actifs, mentions veille (si VEILLE activé), événements réalisés.
+	•	Comparaison avec le mois précédent : évolution de chaque indicateur avec flèche directionnelle.
+	•	Section recommandations générée automatiquement : 3 actions suggérées pour le mois suivant.
+	•	Format PDF premium : mise en page professionnelle, aux couleurs du client ou de l'agence.
+	•	Envoi automatique au contact client désigné, avec copie à l'attaché.
+
+A4 — SOCIAL
+Un seul clic. Tous les réseaux du client simultanément.
+
+Réseaux supportés
+	•	Facebook — Pages officielles
+	•	X (Twitter) — Comptes vérifiés et standard
+	•	LinkedIn — Pages entreprise et profils personnels
+	•	Instagram — Comptes professionnels (image obligatoire)
+	•	WhatsApp Business — Canaux officiels
+Fonctionnalités
+	•	Connexion OAuth par réseau, par client — les tokens sont stockés de façon chiffrée et isolée par client.
+	•	Composition unifiée : rédiger une fois, HERALDO adapte automatiquement le format selon les contraintes de chaque réseau (longueur, dimensions image, hashtags).
+	•	Planification : publication immédiate ou programmée par réseau.
+	•	Workflow de validation : le client peut valider ou rejeter avant publication via une interface simple sans compte HERALDO.
+	•	Suivi d'engagement : likes, partages, commentaires, portée — agrégés dans le rapport mensuel.
+	•	Historique des publications par réseau et par client.
+
+A5 — AGENDA
+Le calendrier éditorial de chaque client — la colonne vertébrale de la stratégie de communication.
+
+	•	Vue calendrier par client : mensuelle, hebdomadaire, quotidienne.
+	•	Types d'événements : communiqué planifié, conférence de presse, publication sociale, interview, point presse, date anniversaire clé.
+	•	Récurrence : événements réguliers (bilan mensuel, revue trimestrielle) créés une fois et répétés automatiquement.
+	•	Rappels : notifications push et email à J-7, J-3 et J-1 avant chaque événement.
+	•	Partage client : le client peut consulter son propre calendrier éditorial via un lien sécurisé, sans compte HERALDO.
+	•	Glisser-déposer pour réorganiser les événements.
+	•	Vue globale agence : tous les clients sur un seul calendrier, avec code couleur par client.
+
+A6 — STUDIO
+Des visuels professionnels en 30 secondes, sans designer, brandés aux couleurs du client.
+
+	•	Bibliothèque de templates : couvertures réseaux sociaux, bannières, cartes de citation, visuels de communiqué, stories Instagram — pour chaque réseau et format.
+	•	Personnalisation par client : logo, couleurs, typographies sauvegardés une fois — appliqués automatiquement à tous les templates.
+	•	Génération automatique : en saisissant le titre d'un communiqué, HERALDO STUDIO génère automatiquement le visuel associé.
+	•	Bibliothèque d'images libres de droits intégrée : 500 000+ photos, filtrables par thème et région africaine.
+	•	Export multi-format : PNG pour réseaux sociaux, PDF pour impression, SVG pour usage éditorial.
+	•	Historique des visuels produits par client.
+
+A7 — INBOX
+Toutes les réponses journalistes arrivent au même endroit. Fini les fils email éparpillés.
+
+	•	Centralisation des réponses : tout journaliste répondant à un communiqué HERALDO voit sa réponse apparaître dans l'INBOX du client concerné.
+	•	Tri automatique par client, par journaliste, par sujet, par urgence.
+	•	Réponse depuis HERALDO : l'attaché répond directement dans l'interface — la réponse part depuis l'adresse email du client (marque blanche).
+	•	Détection d'intentions : HERALDO identifie automatiquement si un journaliste demande une interview, une précision, un document complémentaire — et le signale dans l'interface.
+	•	Assignation : dans une agence multi-personnes, chaque message peut être assigné à un collaborateur.
+	•	Archivage automatique des conversations clôturées.
+
+A8 — CRM
+La mémoire relationnelle de chaque journaliste, par client.
+
+	•	Fiche journaliste enrichie : historique de toutes les interactions avec ce journaliste pour ce client, articles publiés suite aux communiqués, notes de suivi.
+	•	Score de relation : indicateur de chaleur de la relation (froid, tiède, chaud) calculé sur la base des interactions récentes.
+	•	Alertes anniversaire : rappel quand un journaliste n'a pas été contacté depuis 30 jours.
+	•	Segmentation affinée : au-delà des catégories standard, possibilité de créer des listes personnalisées par client (ex : journalistes clés pour la saison des élections, contacts pour la couverture d'une crise spécifique).
+	•	Import depuis LinkedIn : extraction semi-automatique des profils de journalistes depuis LinkedIn.
+	•	Partage inter-clients contrôlé : un journaliste présent dans deux portefeuilles clients peut être partagé avec les données communes (coordonnées) mais les historiques restent distincts.
+
+A9 — MOBILE
+L'application native iOS et Android dédiée à l'attaché de presse. Parce que ce métier se vit dehors, pas derrière un bureau.
+
+Fonctionnalités prioritaires sur mobile
+	•	Envoi de communiqués depuis le téléphone : composition complète, sélection des destinataires, envoi immédiat ou programmé.
+	•	Notifications en temps réel : alerte VEILLE, réponse journaliste, validation client en attente, communiqué lu par X journalistes.
+	•	Accès INBOX : lecture et réponse aux messages journalistes depuis le téléphone.
+	•	Enregistrement vocal : enregistrer une note vocale post-interview qui est automatiquement transcrite et attachée à la fiche du journaliste.
+	•	QR code ACCREDIT : scanner les QR codes des journalistes accrédités lors d'un événement géré pour un client.
+	•	Mode hors ligne : consultation des contacts, de l'agenda et des communiqués récents sans connexion internet.
+Plateforme
+	•	iOS (iPhone 12+) et Android (Android 10+) — développement React Native pour codebase unique.
+	•	Biometrie : Face ID / Touch ID pour l'authentification rapide.
+	•	Notifications push natives via FCM (Android) et APNs (iOS).
+
+
+4. Modèle tarifaire HERALDO AGENCE
+Le modèle tarifaire est conçu pour être accessible à l'attaché indépendant débutant et rentable pour l'agence établie. Il est basé sur le nombre de clients actifs — l'attaché répercute le coût sur ses clients.
+
+Formule
+Clients actifs
+Prix/mois
+Modules inclus
+SOLO
+1 à 3 clients
+150 000 FCFA
+A1+A2+A3+A5+A7+A8 + App mobile
+PRO
+4 à 10 clients
+280 000 FCFA
+Tout SOLO + A4 SOCIAL + A6 STUDIO
+AGENCE
+11 à 25 clients
+420 000 FCFA
+Tout PRO + multi-utilisateurs + API
+ENTERPRISE
+25+ clients
+Sur devis
+Tout + déploiement dédié + SLA renforcé
+
+Modèle de répercussion recommandé : un attaché en formule PRO à 280 000 FCFA/mois pour 10 clients facture 50 000 FCFA/mois de « frais de gestion plateforme » à chaque client. Le coût HERALDO est intégralement couvert avec 6 clients facturés. Les 4 clients restants sont du profit pur.
+
+
+5. Positionnement dans l'écosystème HERALDO
+5.1 Complémentarité avec les autres modules
+HERALDO AGENCE n'est pas en concurrence avec HERALDO institutionnel. Les deux cibles sont complémentaires et se renforcent mutuellement.
+
+Dimension
+HERALDO Institutionnel
+HERALDO AGENCE
+Utilisateur
+Chargé de com d'une institution
+Attaché de presse indépendant ou en agence
+Clients
+Un seul — son institution
+Plusieurs — 3 à 25+
+Décideur
+Secrétaire Général / Ministre
+Lui-même ou directeur d'agence
+Cycle de vente
+3 à 12 mois
+1 à 4 semaines
+Ticket mensuel
+500 000 à 2 000 000 FCFA
+150 000 à 420 000 FCFA
+Effet de réseau
+Fait adopter HERALDO à ses journalistes
+Fait adopter HERALDO à ses clients institutionnels
+
+L'effet de réseau est la clé stratégique. Un attaché de presse qui travaille pour 5 institutions clients va naturellement promouvoir HERALDO auprès de ces institutions. Chaque attaché converti est un canal d'acquisition pour les contrats institutionnels.
+
+5.2 Roadmap d'intégration dans le CDC V2
+HERALDO AGENCE devient officiellement le Module M10 du CDC Fonctionnel V2 (HP-CDC-FONC-V2-2026). Son intégration dans le tableau de bord existant se fait via l'ajout du rôle AGENCE dans la matrice RBAC existante.
+
+Phase
+Livrable
+Délai estimé
+Phase V1
+A1+A2+A3+A5+A7+A8 — Fonctions core multi-client
+Inclus dans Phase 1 V1 — 2 mois
+Phase V1
+A9 MOBILE — Application iOS et Android
+Phase 3 V1 — 2 mois supplémentaires
+Phase V2
+A4 SOCIAL — Intégrations réseaux sociaux
+V2 — 3 mois après V1
+Phase V2
+A6 STUDIO — Génération de visuels
+V2 — 3 mois après V1

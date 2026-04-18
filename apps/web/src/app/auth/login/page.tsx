@@ -18,12 +18,13 @@ import Link from "next/link";
 import Button from "@/components/ui/Button";
 import { api } from "@/lib/api";
 
-type Role = "INSTITUTION" | "JOURNALIST";
+type Role = "INSTITUTION" | "JOURNALIST" | "AGENCY";
 type Step = "email" | "otp" | "success";
 
 const roles: { id: Role; label: string; icon: typeof Building2; desc: string }[] = [
-  { id: "INSTITUTION", label: "Organisation", icon: Building2, desc: "Mairies, Ministeres, Entreprises, ONG, Agences RP" },
+  { id: "INSTITUTION", label: "Organisation", icon: Building2, desc: "Mairies, Ministeres, Entreprises, ONG" },
   { id: "JOURNALIST", label: "Journaliste & Media", icon: Pen, desc: "Presse, Radio, TV, Web, Influenceurs" },
+  { id: "AGENCY", label: "Agence & Attache", icon: Landmark, desc: "Agences RP, Attaches de presse independants" },
 ];
 
 export default function LoginPage() {
@@ -76,7 +77,7 @@ export default function LoginPage() {
       setStep("success");
       // Rediriger apres 1.5s
       setTimeout(() => {
-        const dest = res.user.role === "JOURNALIST" ? "/journalist/dashboard" : "/institution/dashboard";
+        const dest = res.user.role === "JOURNALIST" ? "/journalist/dashboard" : res.user.role === "AGENCY" ? "/agence/dashboard" : "/institution/dashboard";
         window.location.href = dest;
       }, 1500);
     } catch (err: any) {
@@ -182,7 +183,7 @@ export default function LoginPage() {
                   <p className="text-warm-gray text-sm mb-8">Entrez votre email — nous vous enverrons un code de connexion.</p>
 
                   {/* Role selector */}
-                  <div className="grid grid-cols-2 gap-3 mb-6">
+                  <div className="grid grid-cols-3 gap-3 mb-6">
                     {roles.map((r) => (
                       <button
                         key={r.id}

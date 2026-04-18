@@ -1,0 +1,358 @@
+HERALDO
+Cahier des Spécifications Techniques — Version 2.0
+Architecture · Stack · APIs · Sécurité · Infrastructure · M10 AGENCE
+Référence
+HP-CST-V2-2026
+Version
+2.0 — Intégration M10 AGENCE
+Supersède
+HP-CST-V1-2026
+Destinataire
+Équipe technique AUXX
+Date
+Avril 2026
+
+
+
+
+
+1. Architecture générale
+1.1 Stack technique global
+Couche
+Technologie
+Rôle
+Frontend
+Next.js 14 + TypeScript
+Interface — SSR + SPA hybride
+API Gateway
+Nginx + Express
+Routage, rate limiting, auth
+Backend
+NestJS + TypeScript
+Services métier modulaires
+Base de données
+PostgreSQL 15
+Schema-per-tenant + sous-tenants AGENCE
+Cache
+Redis 7
+Sessions, cache, queues Bull
+Stockage
+MinIO S3-compatible
+Fichiers, archives, PDFs rapports
+Search
+Elasticsearch 8
+Full-text ARCHIVE + VEILLE
+Streaming
+MediaSoup WebRTC
+Module LIVE
+Mobile
+React Native + Expo
+Module M10 A9 — iOS + Android
+PDF
+Puppeteer headless
+Rapports clients M10 A3
+IA
+OpenAI GPT-4o-mini
+Transcription LIVE + analyse VEILLE + briefs AGENCE
+
+1.2 Architecture multi-tenant étendue pour M10
+M1-M9 : architecture schema-per-tenant standard. Un ministère = un tenant = un schéma PostgreSQL. M10 AGENCE : architecture sous-tenant imbriquée. Une agence = un tenant HERALDO standard + N sous-tenants clients. Chaque client est isolé dans un schéma prefixé agency_{id}_client_{id}. L'isolation est garantie au niveau base de données — aucune requête inter-clients sans privilège explicite.
+
+1.3 RBAC complet — tous modules
+Rôle
+Modules accessibles
+Restrictions
+SUPER_ADMIN
+Tous — administration globale
+Instance AUXX uniquement
+ADMIN_INSTITUTION
+Tous les modules souscrits
+Sa propre institution uniquement
+DIRECTEUR_COM
+M1+M2+M4+M5+M6+M9
+Pas accès INTERNE M3
+CHARGE_COM
+M1+M2
+Envoi et annuaire uniquement
+SECRETAIRE_GENERAL
+M3+M6 (lecture)
+Pas envoi direct — validation uniquement
+AGENCY_ADMIN
+M10 complet — tous clients
+Sa propre agence uniquement
+AGENCY_OPERATOR
+M10 clients assignés
+Pas facturation ni création client
+CLIENT_REVIEWER
+Interface validation marque blanche
+Pas accès backoffice HERALDO
+LECTEUR
+M8 ARCHIVE (lecture)
+Consultation uniquement
+
+
+2. Modèle de données complet
+2.1 Entités M1-M9 (institutions)
+Entités core
+	•	Institution : id, name, slug, plan, settings, created_at
+	•	User : id, institution_id, email, role, 2fa_enabled, last_login
+	•	Journalist : id, institution_id, full_name, email, phone, media_id, specialties[], status
+	•	Media : id, name, type, audience_size, region
+	•	Communique : id, institution_id, title, content, status, scheduled_at, sent_at, author_id
+	•	Send : id, communique_id, journalist_id, sent_at, opened_at, read_duration
+
+Entités modules étendus
+	•	LiveSession : id, institution_id, title, status, started_at, ended_at, recording_url, transcript
+	•	VeilleKeyword : id, institution_id, keyword, weight, alert_threshold
+	•	Mention : id, institution_id, source, url, content, sentiment, score, detected_at
+	•	CitizenSubscriber : id, institution_id, phone, location, consent_date, active
+	•	Archive : id, institution_id, document_id, hash, certified_at, public
+	•	Accreditation : id, journalist_id, institution_id, type, valid_from, valid_until, qr_code
+
+2.2 Entités M10 AGENCE
+Agency (tenant agence)
+	•	id UUID, name, slug, plan ENUM(SOLO|PRO|AGENCY|ENTERPRISE), max_clients INTEGER
+	•	white_label_name, white_label_email, white_label_logo_url NULLABLE
+	•	created_at, updated_at
+
+AgencyClient (sous-tenant)
+	•	id UUID, agency_id FK, name, logo_url, primary_color, secondary_color
+	•	sector ENUM, brief TEXT, editorial_tone ENUM
+	•	contact_name, contact_email — interlocuteur côté client
+	•	reviewer_token STRING UNIQUE — accès interface validation sans compte
+	•	monthly_budget INTEGER NULLABLE, hourly_rate INTEGER NULLABLE
+	•	active BOOLEAN DEFAULT true
+
+SocialAccount
+	•	id UUID, client_id FK, platform ENUM(facebook|twitter|instagram|linkedin|whatsapp)
+	•	account_id, account_name, access_token TEXT ENCRYPTED, refresh_token TEXT ENCRYPTED NULLABLE
+	•	token_expires_at TIMESTAMP, scopes TEXT[], active BOOLEAN
+
+SocialPost
+	•	id UUID, client_id FK, communique_id FK NULLABLE, platform ENUM
+	•	content TEXT, media_urls TEXT[], status ENUM(draft|pending|scheduled|published|failed)
+	•	scheduled_at NULLABLE, published_at NULLABLE, platform_post_id NULLABLE
+	•	engagement_likes, engagement_shares, engagement_comments INTEGER DEFAULT 0
+
+TimeEntry + ClientReport
+	•	TimeEntry : id, agency_id, client_id, user_id, description, started_at, ended_at, duration_minutes, billable, hourly_rate
+	•	ClientReport : id, client_id, period_start, period_end, communiques_sent, avg_open_rate, estimated_reach, social_engagement_total, pdf_url, sent_to_client
+
+
+3. API REST — Endpoints complets
+3.1 Endpoints M1-M9
+PRESS + RÉSEAU
+	•	GET/POST /api/v1/communiques — Liste + création
+	•	GET /api/v1/communiques/{id}/stats — Statistiques lecture
+	•	POST /api/v1/communiques/{id}/relance — Relance non-lecteurs
+	•	GET/POST /api/v1/journalistes — Annuaire + import CSV
+
+LIVE
+	•	POST /api/v1/lives — Créer session
+	•	GET /api/v1/lives/{id}/token — Token WebRTC par accrédité
+	•	GET /api/v1/lives/{id}/replay — Replay archivé
+	•	POST /api/v1/lives/{id}/questions — Soumettre question
+
+VEILLE
+	•	GET /api/v1/veille/mentions — Fil temps réel
+	•	POST /api/v1/veille/keywords — Configurer mots-clés
+	•	GET /api/v1/veille/rapport — Rapport quotidien/hebdo
+
+ANALYTICS
+	•	GET /api/v1/analytics/overview — KPIs période glissante
+	•	GET /api/v1/analytics/journalistes — Classement par impact
+	•	GET /api/v1/analytics/rapport/pdf — Génération rapport
+
+3.2 Endpoints M10 AGENCE
+Gestion clients
+	•	GET /api/v1/agency/clients — Liste avec stats
+	•	POST /api/v1/agency/clients — Créer client
+	•	POST /api/v1/agency/clients/{id}/switch — Basculer vers ce client
+	•	PUT /api/v1/agency/clients/{id}/whitelabel — Config marque blanche
+	•	POST /api/v1/agency/clients/{id}/whitelabel/verify-dns — Vérifier DNS
+
+Réseaux sociaux
+	•	POST /api/v1/agency/clients/{id}/social-accounts/connect — OAuth
+	•	POST /api/v1/agency/clients/{id}/social-posts — Créer publication
+	•	POST /api/v1/agency/clients/{id}/social-posts/{pid}/publish — Publier
+	•	GET /api/v1/agency/clients/{id}/social-posts/{pid}/stats — Engagement
+
+Rapports et facturation
+	•	POST /api/v1/agency/clients/{id}/reports/generate — Générer rapport PDF
+	•	POST /api/v1/agency/clients/{id}/reports/{rid}/send — Envoyer au client
+	•	POST /api/v1/agency/clients/{id}/time-entries/start — Chronomètre
+	•	POST /api/v1/agency/clients/{id}/invoices/generate — Facture mensuelle
+
+Webhook validation client (sans compte)
+	•	GET /api/v1/agency/clients/{id}/review/{token} — Interface validation
+	•	POST /api/v1/agency/clients/{id}/review/{token}/approve — Approuver
+	•	POST /api/v1/agency/clients/{id}/review/{token}/reject — Rejeter + commentaire
+
+
+4. Sécurité
+4.1 Authentification
+	•	JWT Access token : 15 min — signé RS256 avec clé privée par tenant.
+	•	Refresh token : 7 jours — stocké en base, révocable, rotation à chaque usage.
+	•	2FA TOTP obligatoire pour rôles Admin, SG, AGENCY_ADMIN.
+	•	SSO SAML 2.0 optionnel pour institutions avec Active Directory.
+
+4.2 Sécurité tokens OAuth M10
+	•	Chiffrement AES-256-GCM de chaque token — clé dérivée par couple agency_id+client_id.
+	•	Clé maître stockée dans HashiCorp Vault — jamais en base.
+	•	Rafraîchissement automatique si expiration < 1 heure (Bull background job).
+	•	Notification immédiate si rafraîchissement impossible + désactivation du compte social.
+
+4.3 Protection APIs
+	•	Rate limiting : 100 req/min par IP, 1000/min par token authentifié.
+	•	CORS whitelist stricte par tenant.
+	•	CSRF tokens sur toutes les mutations.
+	•	Input validation class-validator sur tous les DTOs.
+	•	SQL injection : ORM + requêtes paramétrées exclusivement.
+	•	XSS : DOMPurify + Content Security Policy headers.
+
+4.4 Sécurité mobile M10 A9
+	•	Biométrie Face ID/Touch ID + fallback PIN 6 chiffres.
+	•	JWT dans MMKV chiffré — jamais AsyncStorage.
+	•	Session expire après 30 min d'inactivité.
+	•	Certificate pinning — protection MITM.
+	•	Détection jailbreak/root — désactivation automatique.
+	•	Screenshot protection sur écrans sensibles (INBOX, CRM, détail client).
+
+
+5. Infrastructure et SLA
+5.1 Dimensionnement
+Composant
+Technologie
+Dimensionnement V1
+Serveur applicatif
+Docker + Nginx
+2 vCPU, 4 GB RAM min
+Base de données
+PostgreSQL 15
+4 vCPU, 8 GB RAM, SSD 100 GB
+Cache
+Redis 7
+1 vCPU, 2 GB RAM
+Stockage
+MinIO
+500 GB SSD extensible
+Search
+Elasticsearch 8
+2 vCPU, 4 GB RAM
+Streaming LIVE
+MediaSoup
+4 vCPU dédiés
+PDF Generation
+Puppeteer
+1 vCPU dédié — jobs asynchrones
+Monitoring
+Prometheus + Grafana
+0.5 vCPU, 1 GB RAM
+
+5.2 SLA et objectifs de performance
+Indicateur
+Cible
+Mesure
+Disponibilité
+99,5% / mois
+Uptime Robot continu
+Temps de réponse API P95
+< 300ms
+Prometheus
+Chargement page
+< 2 secondes
+Lighthouse > 90
+Envoi communiqué 1000 destinataires
+< 30 secondes
+Bull queue monitoring
+Alerte VEILLE
+< 5 minutes
+Test automatisé quotidien
+Génération rapport PDF
+< 2 minutes
+Bull job monitoring
+RTO
+< 4 heures
+Tests de restauration mensuels
+RPO
+< 1 heure
+Backup toutes les heures
+
+
+6. Intégrations externes — tableau complet
+Service
+Usage — Module
+Auth
+Fallback
+WhatsApp Business API
+CITIZEN M7 + AGENCE A4
+Bearer token Meta
+SMS Twilio
+Twilio
+SMS notifications M7
+API Key + Secret
+Email
+Facebook Graph API
+AGENCE A4 — Pages
+OAuth 2.0
+—
+Twitter API v2
+AGENCE A4 — Tweets
+OAuth 2.0
+—
+LinkedIn API v2
+AGENCE A4 — Pages
+OAuth 2.0
+—
+Instagram Graph
+AGENCE A4 — Posts
+Via Facebook
+Image obligatoire
+OpenAI GPT-4o-mini
+LIVE transcription + VEILLE + Briefs AGENCE
+API Key
+Whisper local
+SendGrid
+Emails transactionnels
+API Key
+SMTP direct
+Cloudflare
+CDN + DDoS protection
+Zone Token
+Nginx direct
+Sentry
+Monitoring erreurs
+DSN
+Logs locaux
+CinetPay / Stripe
+Paiements abonnements
+Secret Key
+Virement manuel
+Puppeteer
+Génération PDF rapports AGENCE
+Interne
+—
+
+7. Spécifications techniques M10 — Points critiques
+7.1 Génération PDF rapports AGENCE
+	•	Puppeteer headless — rendu HTML/Handlebars → PDF haute qualité.
+	•	Chart.js rendu côté serveur — graphiques vectoriels intégrés.
+	•	Watermark supprimé en plan PRO et AGENCE.
+	•	Stockage dans MinIO — URL signée 7 jours envoyée au client.
+	•	Génération asynchrone via Bull job — notification push à la fin.
+
+7.2 Mobile React Native — Architecture
+	•	Expo SDK 50+ — OTA updates sans publication App Store.
+	•	React Query : cache offline via MMKV — données disponibles sans réseau.
+	•	Annuaire, agenda 14 jours, derniers communiqués synchronisés en cache local.
+	•	Actions offline en file d'attente — envoyées automatiquement au retour du réseau.
+	•	Transcription vocale via Expo Audio + OpenAI Whisper API.
+	•	QR code scan ACCREDIT via Expo Camera.
+
+7.3 OAuth réseaux sociaux — Sécurité
+	•	AES-256-GCM chiffrement — clé dérivée par couple agency+client.
+	•	HashiCorp Vault pour la clé maître — jamais stockée en base.
+	•	Rafraîchissement automatique Bull background job à expiration - 1h.
+	•	Rate limits par réseau respectés via queue avec throttling Bull.
+
+Ce document constitue la référence technique complète de HERALDO V1 et V2 incluant le Module M10 AGENCE. Toute décision d'architecture dérogeant à ces spécifications doit être documentée et validée par le CTO d'AUXX SAS. Version HP-CST-V2-2026 supersède HP-CST-V1-2026.

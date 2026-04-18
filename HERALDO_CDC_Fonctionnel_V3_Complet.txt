@@ -1,0 +1,519 @@
+HERALDO
+Cahier des Charges Fonctionnel — Version 3.0
+Écosystème complet — 10 modules — AUXX SAS
+Référence
+HP-CDC-FONC-V3-2026
+Version
+3.0 — Intégration M10 AGENCE
+Supersède
+HP-CDC-FONC-V2-2026
+Éditeur
+AUXX SAS — Abidjan, Côte d'Ivoire
+Modules
+M1 à M10 — Écosystème complet
+Date
+Avril 2026
+
+
+
+
+
+1. Vision et architecture globale
+1.1 Positionnement
+HERALDO est la plateforme de communication institutionnelle officielle des institutions d'Afrique de l'Ouest, éditée par AUXX SAS. En V3, l'écosystème couvre deux segments distincts : les institutions publiques (M1 à M9) et les professionnels de la communication qui les servent (M10 AGENCE).
+
+Principe fondateur : HERALDO entre par la communication de presse, crée la dépendance par la valeur, s'enrichit progressivement. Le module M10 AGENCE crée un effet de réseau puissant : chaque attaché de presse converti devient un ambassadeur HERALDO auprès de ses clients institutionnels.
+
+1.2 Les 10 modules — Vue d'ensemble
+#
+Module
+Usage
+Cible
+Priorité
+Version
+M1
+PRESS
+Communication presse externe
+Institution
+P0
+V1
+M2
+RÉSEAU
+Directions régionales
+Institution
+P0
+V1
+M3
+INTERNE
+Notes de service
+Institution
+P0
+V1
+M4
+LIVE
+Conférences hybrides
+Institution
+P0
+V1
+M5
+VEILLE
+Surveillance médiatique
+Institution
+P0
+V1
+M6
+ANALYTICS
+Mesure d'impact
+Institution
+P0
+V1
+M7
+CITIZEN
+Canal citoyens
+Institution
+P1
+V2
+M8
+ARCHIVE
+Mémoire institutionnelle
+Institution
+P1
+V2
+M9
+ACCREDIT
+Accréditations journalistes
+Institution
+P1
+V2
+M10
+AGENCE — Cockpit multi-clients
+Agences RP, attachés de presse
+Agences
+P0 — V1
+V1
+
+M10 AGENCE est surligné en bleu car il cible un segment différent des M1-M9. Il n'est pas une extension des modules institutionnels — c'est un produit distinct qui partage la même infrastructure.
+
+
+
+MODULE M1 — HERALDO PRESS
+Le point d'entrée — communication presse externe
+
+Audience cible
+Chargé de communication, Directeur de la communication
+Priorité
+P0 — V1 core
+Budget estimé
+8 000 000 à 12 000 000 FCFA
+KPI principal
+Taux de lecture > 80% dans les 24h suivant l'envoi
+
+Problématique résolue
+Les institutions ivoiriennes n'ont aucun outil structuré pour gérer leur communication de presse. Les communiqués partent par WhatsApp et email en masse, sans suivi de lecture, sans annuaire centralisé, sans historique.
+
+Fonctionnalités
+Annuaire journalistes
+	•	Profil complet journaliste : média, spécialités, région, historique.
+	•	Import CSV d'annuaires existants.
+	•	Segmentation multicritères pour ciblage précis.
+Envoi de communiqués
+	•	Éditeur riche : texte, images, pièces jointes.
+	•	Envoi immédiat ou programmé.
+	•	Accusé de réception et de lecture horodaté.
+	•	Relance automatique des non-lecteurs.
+Tableau de bord
+	•	Taux d'ouverture, taux de clic, médias actifs.
+	•	Historique complet filtrable.
+	•	Templates pré-formatés conformes aux standards institutionnels.
+
+
+MODULE M2 — HERALDO RÉSEAU
+Extension aux directions régionales et structures sous tutelle
+
+Audience cible
+Directeur de la communication, responsables régionaux
+Priorité
+P0 — V1
+Budget estimé
+3 000 000 à 5 000 000 FCFA
+KPI principal
+100% des directions régionales couvertes dans les 30 minutes
+
+Problématique résolue
+L'information officielle ne circule pas correctement entre l'administration centrale et les 31 directions régionales. Les préfets apprennent les décisions ministérielles par les médias plutôt que par leurs propres canaux.
+
+Fonctionnalités
+	•	Annuaire des points focaux par direction régionale et établissement sous tutelle.
+	•	Diffusion simultanée journalistes + directions en un envoi.
+	•	Message différencié : version presse publique vs version interne étendue.
+	•	Carte de couverture géographique des directions atteintes.
+	•	Tableau de bord : taux de lecture par direction.
+
+
+MODULE M3 — HERALDO INTERNE
+Coordination interne — notes de service et circulaires officielles
+
+Audience cible
+Secrétaire Général, Directeurs, Chefs de service
+Priorité
+P0 — V1
+Budget estimé
+4 000 000 à 6 000 000 FCFA
+KPI principal
+Accusé de lecture de 100% des notes dans les 48h
+
+Problématique résolue
+Les notes de service circulent encore par courrier physique ou email sans accusé de lecture officiel. Il est impossible de prouver qu'un agent a bien reçu et pris connaissance d'une directive.
+
+Fonctionnalités
+	•	Rédaction et envoi de notes de service, circulaires, directives.
+	•	Accusé de réception obligatoire avec signature numérique horodatée.
+	•	Niveaux de confidentialité : normal, restreint, confidentiel.
+	•	Relance automatique des non-lecteurs.
+	•	Tableau de bord SG : suivi temps réel, rapport hebdomadaire.
+	•	Alertes de non-réception escaladées à la hiérarchie.
+
+
+MODULE M4 — HERALDO LIVE
+Conférences de presse hybrides — présentielles et en direct
+
+Audience cible
+Chargé de communication, journalistes accrédités distants
+Priorité
+P0 — V1
+Budget estimé
+6 000 000 à 8 000 000 FCFA
+KPI principal
+Taux de participation journalistes distants > 40%
+
+Problématique résolue
+Les conférences de presse restent des événements physiques contraignants. Les journalistes en région ou à l'étranger ne peuvent pas y accéder. L'information officielle perd en portée et en précision.
+
+Fonctionnalités
+Diffusion en direct
+	•	Streaming vidéo HD sécurisé via WebRTC vers tous les accrédités.
+	•	Lien d'accès personnalisé et non-partageable par journaliste.
+	•	Salle virtuelle sécurisée — seuls les accrédités valides accèdent.
+Interaction temps réel
+	•	Questions-réponses : soumission et sélection en direct.
+	•	Chat modéré entre accrédités et équipe com.
+Post-événement
+	•	Replay disponible dans les 30 minutes.
+	•	Transcription automatique avec identification des intervenants.
+	•	Rapport de participation complet.
+
+
+MODULE M5 — HERALDO VEILLE
+Surveillance médiatique automatique — savoir avant votre ministre
+
+Audience cible
+Chargé de communication, cellule de crise, cabinet
+Priorité
+P0 — V1
+Budget estimé
+8 000 000 à 12 000 000 FCFA
+KPI principal
+Délai de détection d'une mention < 5 minutes
+
+Problématique résolue
+Aucun outil de veille médiatique automatisé n'existe pour les institutions ivoiriennes. Les chargés de com apprennent ce qui se dit sur leur institution par hasard.
+
+Fonctionnalités
+Sources surveillées
+	•	50+ médias en ligne ivoiriens — flux RSS + scraping.
+	•	Réseaux sociaux : Facebook, X, LinkedIn.
+	•	Radios et TV : transcription des JT principaux.
+	•	Presse diaspora et médias régionaux.
+Alertes et monitoring
+	•	Alertes temps réel positif/négatif/neutre.
+	•	Détection de pic : alerte crise si volume anormal.
+	•	Rapport matinal automatique à 7h00.
+Gestion de crise
+	•	Mode crise : cellule virtuelle, chronomètre de réponse, brouillon réponse officielle.
+
+
+MODULE M6 — HERALDO ANALYTICS
+De l'envoi à l'impact réel — la communication devient mesurable
+
+Audience cible
+Directeur com, Secrétaire Général, Ministre
+Priorité
+P0 — V1
+Budget estimé
+5 000 000 à 7 000 000 FCFA
+KPI principal
+Rapport mensuel utilisé par 80% des SG dans les 3 mois
+
+Problématique résolue
+Les chargés de communication ne peuvent pas prouver la valeur de leur travail. Aucune institution ivoirienne ne mesure actuellement l'impact réel de sa communication.
+
+Fonctionnalités
+	•	Portée finale estimée : croisement données HERALDO + audience médias.
+	•	Taux de conversion communiqué → article publié.
+	•	Classement journalistes par impact généré.
+	•	Rapport hebdomadaire chargé de com, mensuel SG, trimestriel Ministre.
+	•	Export PDF + PowerPoint en un clic.
+	•	Analyse thématique et suggestions d'optimisation.
+
+
+MODULE M7 — HERALDO CITIZEN
+Canal direct citoyens — SMS, WhatsApp, push depuis une interface
+
+Audience cible
+Mairies, directions régionales, Ministère de l'Intérieur
+Priorité
+P1 — V2
+Budget estimé
+7 000 000 à 10 000 000 FCFA
+KPI principal
+Taux d'abonnement citoyen > 5% de la population cible en 6 mois
+
+Problématique résolue
+Les institutions ne communiquent pas directement avec les citoyens. Une coupure d'eau, un arrêté municipal — le citoyen l'apprend par hasard ou pas du tout.
+
+Fonctionnalités
+	•	Un envoi → journaliste HERALDO + citoyen WhatsApp/SMS simultanément.
+	•	Segmentation géographique par commune, quartier, arrondissement.
+	•	Alertes urgentes : coupures, intempéries, convocations.
+	•	Abonnement citoyen par QR code affiché en mairie.
+	•	Conformité RGPD et opt-out permanent.
+
+
+MODULE M8 — HERALDO ARCHIVE
+La mémoire institutionnelle officielle — tout archivé, rien perdu
+
+Audience cible
+Directions com, Secrétariats Généraux, Archives nationales
+Priorité
+P1 — V2
+Budget estimé
+4 000 000 à 6 000 000 FCFA
+KPI principal
+100% des communications archivées et retrouvables en < 30 secondes
+
+Problématique résolue
+Les institutions n'ont pas de mémoire numérique organisée. Les communiqués se perdent dans des boîtes mail. Un journaliste ne peut pas retrouver la position officielle d'un ministère en 2022.
+
+Fonctionnalités
+	•	Archivage automatique de tout communiqué envoyé via HERALDO.
+	•	Import rétroactif d'archives existantes.
+	•	Recherche full-text dans tous les documents.
+	•	Hash cryptographique garantissant l'intégrité — aucune modification post-archivage.
+	•	Horodatage légal certifié et opposable.
+	•	Interface publique optionnelle + API journalistes accrédités.
+
+
+MODULE M9 — HERALDO ACCREDIT
+Plateforme officielle d'accréditation journaliste — QR code, dossier numérique
+
+Audience cible
+Directions de la communication de toutes les institutions
+Priorité
+P1 — V2
+Budget estimé
+5 000 000 à 7 000 000 FCFA
+KPI principal
+HERALDO ACCREDIT devient le standard pour 80% des institutions en 18 mois
+
+Problématique résolue
+La gestion des accréditations est un chaos. Chaque ministère a sa propre liste sur Excel. Des journalistes non accrédités accèdent aux événements, des légitimes sont refusés.
+
+Fonctionnalités
+	•	Dossier d'accréditation numérique complet avec workflow de validation.
+	•	QR code unique vérifiable à l'entrée des événements.
+	•	Application de vérification pour agents d'accueil.
+	•	Annuaire national des journalistes accrédités.
+	•	Statistiques de couverture par journaliste.
+
+
+MODULE M10 — HERALDO AGENCE
+Le cockpit des agences RP et attachés de presse — multi-clients, marque blanche, rapport automatique
+
+Audience cible
+Attachés de presse indépendants (3-15 clients) et agences RP (2-20 personnes)
+Priorité
+P0 — V1 — Segment stratégique pour l'acquisition institutionnelle
+Budget estimé
+31 000 000 à 46 000 000 FCFA
+KPI principal
+50 agences actives en 12 mois → effet réseau vers 200+ institutions clientes
+
+Problématique résolue
+L'attaché de presse jongle entre des boîtes mail distinctes, envoie des communiqués depuis Gmail, produit des rapports manuellement et n'a aucun outil professionnel dédié à son métier. HERALDO AGENCE est son cockpit de pilotage — multi-clients, en marque blanche, depuis son téléphone.
+
+Les 9 sous-modules AGENCE
+#
+Sous-module
+Rôle
+Priorité
+Version
+A1
+MULTI-CLIENT
+Gestion N clients depuis un seul compte — isolation totale
+P0
+V1
+A2
+MARQUE BLANCHE
+Envois au nom du client — email dédié, interface brandée client
+P0
+V1
+A3
+RAPPORT CLIENT
+PDF mensuel auto aux couleurs client, envoi automatique
+P0
+V1
+A4
+SOCIAL
+OAuth Facebook/X/LinkedIn/Instagram/WhatsApp — publication simultanée
+P1
+V2
+A5
+AGENDA
+Calendrier éditorial partagé, récurrence, partage client sans compte
+P0
+V1
+A6
+STUDIO
+Templates visuels brandés auto par client — bibliothèque images libres
+P1
+V2
+A7
+INBOX
+Centralisation réponses journalistes — détection intentions — assignation
+P0
+V1
+A8
+CRM
+Historique relation journaliste par client — score chaleur — import LinkedIn
+P0
+V1
+A9
+MOBILE
+App React Native iOS/Android — offline — biométrie — enregistrement vocal
+P0
+V1
+
+Modèle tarifaire
+Formule
+Clients actifs
+Prix/mois
+Contenu
+SOLO
+1 à 3 clients
+150 000 FCFA
+A1+A2+A3+A5+A7+A8 + App mobile
+PRO
+4 à 10 clients
+280 000 FCFA
+SOLO + A4 SOCIAL + A6 STUDIO
+AGENCE
+11 à 25 clients
+420 000 FCFA
+PRO + multi-utilisateurs + API
+ENTERPRISE
+25+ clients
+Sur devis
+Tout + SLA renforcé + déploiement dédié
+
+Effet réseau stratégique : chaque attaché de presse converti à HERALDO AGENCE travaille pour des institutions. En utilisant HERALDO pour gérer ses clients institutionnels, il les expose naturellement au produit et accélère l'adoption institutionnelle. M10 est le canal d'acquisition le plus puissant pour M1 à M9.
+
+
+Budget consolidé — 10 modules
+#
+Module
+Cible
+Min FCFA
+Max FCFA
+Version
+M1
+PRESS
+Institution
+8 000 000
+12 000 000
+V1
+M2
+RÉSEAU
+Institution
+3 000 000
+5 000 000
+V1
+M3
+INTERNE
+Institution
+4 000 000
+6 000 000
+V1
+M4
+LIVE
+Institution
+6 000 000
+8 000 000
+V1
+M5
+VEILLE
+Institution
+8 000 000
+12 000 000
+V1
+M6
+ANALYTICS
+Institution
+5 000 000
+7 000 000
+V1
+M7
+CITIZEN
+Institution
+7 000 000
+10 000 000
+V2
+M8
+ARCHIVE
+Institution
+4 000 000
+6 000 000
+V2
+M9
+ACCREDIT
+Institution
+5 000 000
+7 000 000
+V2
+M10
+AGENCE
+Agences RP
+31 000 000
+46 000 000
+V1
+TOTAL GÉNÉRAL — 10 modules
+81 000 000
+119 000 000
+—
+
+V1 (M1-M6 + M10 AGENCE) : 65 à 90 millions FCFA. V2 (M7-M9) : 16 à 23 millions FCFA sur les premiers revenus. ROI : 3 contrats institutionnels annuels à 18M FCFA + 50 agences PRO à 280K/mois = 54M FCFA/an de revenus récurrents. ROI total atteint en 18 mois.
+
+Roadmap — 5 phases
+Phase
+Durée
+Modules
+Jalon
+Phase 0
+S1-S4
+Architecture, infrastructure, CI/CD
+Environnement de dev opérationnel
+Phase 1
+S5-S12
+M1 PRESS + M2 RÉSEAU + M10 AGENCE core (A1-A3-A5-A7-A8)
+MVP + premier client pilote institutionnel + 5 agences bêta
+Phase 2
+S13-S20
+M3 INTERNE + M6 ANALYTICS + M10 A9 MOBILE
+V1 complète — lancement commercial
+Phase 3
+S21-S28
+M4 LIVE + M5 VEILLE + M10 A4 SOCIAL + A6 STUDIO
+Écosystème V1 complet — croissance
+Phase 4
+S29-S40
+M7 CITIZEN + M8 ARCHIVE + M9 ACCREDIT
+V2 — présence UEMOA — levée de fonds

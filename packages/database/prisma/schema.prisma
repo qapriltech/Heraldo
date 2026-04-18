@@ -195,6 +195,9 @@ model User {
   // OTP
   otpCodes OtpCode[]
 
+  // M10 Agency
+  agencyClients     AgencyClient[]
+
   @@map("users")
 }
 
@@ -1879,4 +1882,85 @@ model AccreditationCard {
 
   @@index([journalistId, status])
   @@map("accreditation_cards")
+}
+
+// ============================================================
+// M10 AGENCE — Multi-client cockpit for PR agencies
+// ============================================================
+
+model AgencyClient {
+  id               String   @id @default(uuid())
+  agencyUserId     String   @map("agency_user_id")
+  clientName       String   @map("client_name")
+  clientLogo       String?  @map("client_logo")
+  clientSector     String   @map("client_sector")
+  clientBrandColor String?  @map("client_brand_color")
+  clientBrief      String?  @map("client_brief") @db.Text
+  clientTone       String?  @map("client_tone")
+  contactName      String   @map("contact_name")
+  contactEmail     String   @map("contact_email")
+  contactPhone     String?  @map("contact_phone")
+  isActive         Boolean  @default(true) @map("is_active")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  agencyUser       User     @relation(fields: [agencyUserId], references: [id], onDelete: Cascade)
+  reports          AgencyClientReport[]
+  timeEntries      AgencyTimeEntry[]
+  whiteLabel       AgencyWhiteLabel?
+
+  @@index([agencyUserId, isActive])
+  @@map("agency_clients")
+}
+
+model AgencyClientReport {
+  id               String   @id @default(uuid())
+  agencyClientId   String   @map("agency_client_id")
+  reportMonth      String   @map("report_month") // YYYY-MM
+  communiquesSent  Int      @default(0) @map("communiques_sent")
+  avgOpenRate      Float    @default(0) @map("avg_open_rate")
+  estimatedReach   Int      @default(0) @map("estimated_reach")
+  topJournalists   Json?    @map("top_journalists")
+  mentions         Int      @default(0)
+  recommendations  Json?
+  pdfUrl           String?  @map("pdf_url")
+  generatedAt      DateTime @default(now()) @map("generated_at")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  agencyClient     AgencyClient @relation(fields: [agencyClientId], references: [id], onDelete: Cascade)
+
+  @@index([agencyClientId, reportMonth])
+  @@map("agency_client_reports")
+}
+
+model AgencyTimeEntry {
+  id               String   @id @default(uuid())
+  agencyClientId   String   @map("agency_client_id")
+  userId           String   @map("user_id")
+  description      String
+  durationMinutes  Int      @map("duration_minutes")
+  date             DateTime
+  billable         Boolean  @default(true)
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  agencyClient     AgencyClient @relation(fields: [agencyClientId], references: [id], onDelete: Cascade)
+
+  @@index([agencyClientId, date])
+  @@map("agency_time_entries")
+}
+
+model AgencyWhiteLabel {
+  id                 String   @id @default(uuid())
+  agencyClientId     String   @unique @map("agency_client_id")
+  senderName         String   @map("sender_name")
+  senderEmail        String   @map("sender_email")
+  emailSignatureHtml String?  @map("email_signature_html") @db.Text
+  reportBranding     String   @default("client") @map("report_branding") // client|agency
+  logoOverrideUrl    String?  @map("logo_override_url")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  agencyClient       AgencyClient @relation(fields: [agencyClientId], references: [id], onDelete: Cascade)
+
+  @@map("agency_white_labels")
 }
