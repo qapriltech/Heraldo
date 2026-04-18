@@ -18,13 +18,12 @@ import Link from "next/link";
 import Button from "@/components/ui/Button";
 import { api } from "@/lib/api";
 
-type Role = "INSTITUTION" | "JOURNALIST" | "AGENCY";
+type Role = "INSTITUTION" | "JOURNALIST";
 type Step = "email" | "otp" | "success";
 
 const roles: { id: Role; label: string; icon: typeof Building2; desc: string }[] = [
-  { id: "INSTITUTION", label: "Institution", icon: Building2, desc: "Entreprises, Mairies, Ministeres, ONG" },
-  { id: "JOURNALIST", label: "Journaliste", icon: Pen, desc: "Journalistes et redactions" },
-  { id: "AGENCY", label: "Agence RP", icon: Landmark, desc: "Agences de communication" },
+  { id: "INSTITUTION", label: "Organisation", icon: Building2, desc: "Mairies, Ministeres, Entreprises, ONG, Agences RP" },
+  { id: "JOURNALIST", label: "Journaliste & Media", icon: Pen, desc: "Presse, Radio, TV, Web, Influenceurs" },
 ];
 
 export default function LoginPage() {
@@ -183,7 +182,7 @@ export default function LoginPage() {
                   <p className="text-warm-gray text-sm mb-8">Entrez votre email — nous vous enverrons un code de connexion.</p>
 
                   {/* Role selector */}
-                  <div className="grid grid-cols-3 gap-2 mb-6">
+                  <div className="grid grid-cols-2 gap-3 mb-6">
                     {roles.map((r) => (
                       <button
                         key={r.id}
