@@ -304,7 +304,7 @@ export class AuthService {
       data: {
         email: dto.email,
         fullName: dto.fullName,
-        phone: dto.phone,
+        phoneEncrypted: dto.phone,
         role: 'JOURNALIST',
         status: 'ACTIVE',
         emailVerified: false,
