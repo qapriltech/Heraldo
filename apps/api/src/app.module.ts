@@ -37,6 +37,7 @@ import { AnalyticsReportsModule } from './analytics-reports/analytics-reports.mo
 import { CitizenModule } from './citizen/citizen.module';
 import { ArchiveModule } from './archive/archive.module';
 import { AccreditModule } from './accredit/accredit.module';
+import { RssModule } from './rss/rss.module';
 
 @Module({
   imports: [
@@ -76,6 +77,7 @@ import { AccreditModule } from './accredit/accredit.module';
     CitizenModule,
     ArchiveModule,
     AccreditModule,
+    RssModule,
   ],
   providers: [
     {
