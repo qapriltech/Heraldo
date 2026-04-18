@@ -116,6 +116,22 @@ export class AuthService {
       },
     });
 
+    // Auto-créer le profil Journalist si rôle JOURNALIST et profil manquant
+    if (user.role === 'JOURNALIST') {
+      const existingProfile = await this.prisma.journalist.findFirst({ where: { userId: user.id } });
+      if (!existingProfile) {
+        await this.prisma.journalist.create({
+          data: {
+            userId: user.id,
+            specialties: [],
+            coverageZone: [],
+            languages: ['fr'],
+            accreditationStatus: 'PENDING',
+          },
+        });
+      }
+    }
+
     // Générer les tokens JWT
     const tokens = await this.generateTokens(user.id, user.email, user.role);
 
@@ -244,6 +260,90 @@ export class AuthService {
       console.log(`  Expire dans 10 minutes`);
       console.log(`========================================\n`);
     }
+  }
+
+  /**
+   * Inscription journaliste — crée User + Journalist + MediaOrganization si besoin
+   * Envoie un OTP par email pour vérification
+   */
+  async registerJournalist(dto: {
+    email: string;
+    fullName: string;
+    phone: string;
+    mediaName: string;
+    specialties: string[];
+    coverageZones: string[];
+    languages: string[];
+    pressCardUrl?: string;
+  }) {
+    // Vérifier si l'email est déjà utilisé
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
+
+    if (existingUser) {
+      throw new BadRequestException('Un compte existe déjà avec cet email. Connectez-vous via la page de connexion.');
+    }
+
+    // Trouver ou créer le MediaOrganization
+    let mediaOrg = await this.prisma.mediaOrganization.findFirst({
+      where: { name: { equals: dto.mediaName, mode: 'insensitive' } },
+    });
+
+    if (!mediaOrg) {
+      mediaOrg = await this.prisma.mediaOrganization.create({
+        data: {
+          name: dto.mediaName,
+          type: 'WEB', // default, sera mis à jour par l'admin
+        },
+      });
+    }
+
+    // Créer le User
+    const user = await this.prisma.user.create({
+      data: {
+        email: dto.email,
+        fullName: dto.fullName,
+        phone: dto.phone,
+        role: 'JOURNALIST',
+        status: 'ACTIVE',
+        emailVerified: false,
+      },
+    });
+
+    // Créer le profil Journalist
+    await this.prisma.journalist.create({
+      data: {
+        userId: user.id,
+        mediaOrganizationId: mediaOrg.id,
+        specialties: dto.specialties,
+        coverageZone: dto.coverageZones,
+        languages: dto.languages,
+        pressCardUrl: dto.pressCardUrl || null,
+        accreditationStatus: 'PENDING',
+      },
+    });
+
+    // Générer OTP
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+    await this.prisma.otpCode.create({
+      data: {
+        userId: user.id,
+        code,
+        expiresAt,
+      },
+    });
+
+    // Envoyer OTP par email
+    await this.sendOtpEmail(dto.email, code, dto.fullName);
+
+    return {
+      success: true,
+      message: 'Compte créé. Code de vérification envoyé.',
+      ...(this.configService.get('NODE_ENV') !== 'production' ? { devCode: code } : {}),
+    };
   }
 
   private async generateTokens(userId: string, email: string, role: string) {

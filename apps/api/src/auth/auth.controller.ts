@@ -52,6 +52,17 @@ export class AuthController {
   }
 
   /**
+   * POST /v1/auth/register-journalist
+   * Inscription publique d'un journaliste
+   */
+  @Public()
+  @Post('register-journalist')
+  @HttpCode(HttpStatus.CREATED)
+  registerJournalist(@Body() body: any) {
+    return this.authService.registerJournalist(body);
+  }
+
+  /**
    * GET /v1/auth/me
    * Profil de l'utilisateur connecté
    */

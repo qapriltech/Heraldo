@@ -137,7 +137,7 @@ export default function LandingPage() {
                   Espace Institution
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </Link>
-                <Link href="/auth/login" className="inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl border-2 border-gold/30 text-gold font-bold text-base hover:bg-gold/10 transition-all">
+                <Link href="/inscription/journaliste" className="inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl border-2 border-gold/30 text-gold font-bold text-base hover:bg-gold/10 transition-all">
                   <Play className="w-4 h-4" />
                   Espace Journaliste
                 </Link>
